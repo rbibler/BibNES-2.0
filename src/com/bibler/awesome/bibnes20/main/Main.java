@@ -21,7 +21,7 @@ public class Main {
 	
 	private static ROM setupTestROM() {
 		int[] romArray = new int[0x8000];
-		romArray[0] = 0xA9;
+		romArray[0] = 0xB5;
 		romArray[1] = 0xFE;
 		romArray[2] = 0xA2;
 		romArray[3] = 0xFD;
