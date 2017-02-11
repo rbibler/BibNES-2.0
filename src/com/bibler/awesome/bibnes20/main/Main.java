@@ -1,6 +1,7 @@
 package com.bibler.awesome.bibnes20.main;
 
 import com.bibler.awesome.bibnes20.systems.console.Console;
+import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePakFactory;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
@@ -12,11 +13,17 @@ public class Main {
 		
 		CPUDebugFrame frame = new CPUDebugFrame();
 		
-		ROM testRom = setupTestROM();
+		//ROM testRom = setupTestROM();
 		Console console = new Console();
 		RAM testRam = setupTestRAM();
 		console.getMotherboard().setCPURam(setupTestRAM());
-		console.insertGamePak(GamePakFactory.createGamePakFromRoms(testRom, null));
+		//console.insertGamePak(GamePakFactory.createGamePakFromRoms(testRom, null));
+		ThreadRunner runner = new ThreadRunner();
+		frame.getDebugPanel().getButtonPanel().registerObjectToNotify(runner);
+		runner.registerObjectToNotify(frame);
+		runner.setConsole(console);
+		runner.pause();
+		runner.startEmulator();
 	}
 	
 	private static ROM setupTestROM() {
@@ -24,7 +31,7 @@ public class Main {
 		romArray[0] = 0xA9;
 		romArray[1] = 0xFE;
 		romArray[2] = 0xA2;
-		romArray[3] = 0xFD;
+		romArray[3] = 0x0;
 		romArray[4] = 0xA0;
 		romArray[5] = 0xFC;
 		romArray[6] = 0xA5;

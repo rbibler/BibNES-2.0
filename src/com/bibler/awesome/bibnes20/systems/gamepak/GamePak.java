@@ -26,4 +26,9 @@ public class GamePak {
 		return prgRom.read(address);
 	}
 
+	public void writePrgRom(int address, int data) {
+		prgRom.write(address, data);
+		
+	}
+
 }

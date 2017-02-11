@@ -6,14 +6,14 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 
-public class Motherboard implements Runnable {
+public class Motherboard {
 	
 	private CPU cpu;
 	private RAM cpuRam;
 	private RAM ppuRam;
 	private AddressBus addressBus;
 	private DataBus dataBus;
-	private Thread t;
+	
 	
 	public Motherboard() {
 		cpuRam = new RAM(0x2000);
@@ -22,22 +22,12 @@ public class Motherboard implements Runnable {
 		cpu = new CPU(addressBus, dataBus);
 	}
 	
-	public void reset() {
-		cpu.reset();
-		t = new Thread(this);
-		t.start();
+	public CPU getCPU() {
+		return cpu;
 	}
 	
-
-	@Override
-	public void run() {
-		while(!Thread.interrupted()) {
-			cpu.cycle();
-			cpu.printStatus();
-			try {
-				Thread.sleep(250);
-			} catch(InterruptedException e) {}
-		}
+	public void reset() {
+		cpu.reset();
 	}
 
 	public DataBus getDataBus() {
@@ -54,7 +44,5 @@ public class Motherboard implements Runnable {
 		
 		
 	}
-	
-	
 
 }

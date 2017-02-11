@@ -29,6 +29,16 @@ public class AddressBus {
 			dataBus.latch(gamePak.readPrgRom(address));
 		}
 	}
+	
+	public void assertAddressAndWrite(int address) {
+		this.address = address;
+		final int data = dataBus.read();
+		if(address < 0x2000) {
+			cpuRam.write(address, data);
+		} else if(address >= 0x8000) {
+			gamePak.writePrgRom(address, data);
+		}
+	}
 
 
 	public void setGamePak(GamePak gamePak) {

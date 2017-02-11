@@ -25,6 +25,10 @@ public class CPU {
 	private int instructionLatch;
 	private int addressLatchLow;
 	private int addressLatchHigh;
+	private int effectiveAddressLow;
+	private int effectiveAddressHigh;
+	private int dataLatch;
+	
 	
 	
 	private int tN;
@@ -41,25 +45,20 @@ public class CPU {
 		addressBus.assertAddress(programCounter++);
 		addressLatchHigh = dataBus.read();
 		programCounter = addressLatchLow | addressLatchHigh << 8;
-		tN = -1;
+		tN = 0;
 	}
 	
 	
-	public void cycle() {
+	public int cycle() {
 		if(tN == 0) {
 			fetchInstruction();
 			tN++;
-			return;
+			return tN;
 		}
 		executeInstruction();
 		tN++;
 		programCounter &= 0xFFFF;
-	}
-	
-	public void printStatus() {
-		System.out.println("PC: " + Integer.toHexString(programCounter) + 
-				"Inst: " + Integer.toHexString(instructionLatch) + 
-				" A: " + accumulator + " X: " + indexX + " Y: " + indexY);
+		return tN;
 	}
 	
 	private void fetchInstruction() {
@@ -68,58 +67,473 @@ public class CPU {
 	}
 	
 	private void executeInstruction() {
+		boolean done = false;
+		int BALX = 0;
+		int BALY = 0;
+		int carry;
 		switch(instructionLatch) {
 		case 0x00: 										// Brk
 			
 			break;
 		case 0x01:										// ORA, Indexed Indirect
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				BALX = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(BALX);
+				effectiveAddressLow = dataBus.read();
+				break;
+			case 4:
+				BALX = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress((BALX + 1) & 0xFF); 
+				effectiveAddressHigh = dataBus.read();
+				break;
+			case 5:
+				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+			}
 			break;
 		case 0x05:										// ORA, ZP
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~Z;
+				}
+				break;
+			}
 			break;
 		case 0x06:										// ASL, ZP
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(addressLatchLow);
+					dataLatch = dataBus.read();
+					break;
+				case 3:
+					if((dataLatch & 0x80) > 0) {
+						statusRegister |= C;
+					} else {
+						statusRegister &= ~C;
+					}
+					dataLatch = (dataLatch << 1) & 0xFF;
+					break;
+				case 4:
+					dataBus.latch(dataLatch);
+					addressBus.assertAddressAndWrite(addressLatchLow);
+					tN = -1;
+					if(dataLatch == 0) {
+						statusRegister |= Z;
+					} else {
+						statusRegister &= ~Z;
+					}
+					if((dataLatch & S) > 0) {
+						statusRegister |= S;
+					} else {
+						statusRegister &= ~S;
+					}
+					break;
+			}
 			break;
 		case 0x08:										// PHP
 			
 			break;
 		case 0x09:										// ORA, Immediate
-			
+			if(tN == 1) {
+				addressBus.assertAddress(programCounter++);
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x0A:										// ASL, Accumulator
-			
+			if(tN == 1) {
+				if((accumulator & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator << 1) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & 80) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x0D:										// ORA, Absolute
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | (addressLatchHigh << 8));
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+			}
 			break;
 		case 0x0E:										// ASL, Absolute
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					addressLatchHigh = dataBus.read();
+					break;
+				case 3:
+					addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+					dataLatch = dataBus.read();
+					break;
+				case 4:
+					if((dataLatch & 0x80) > 0) {
+						statusRegister |= C;
+					} else {
+						statusRegister &= ~C;
+					}
+					dataLatch = (dataLatch << 1) & 0xFF;
+					break;
+				case 5:
+					dataBus.latch(dataLatch);
+					addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+					tN = -1;
+					if(dataLatch == 0) {
+						statusRegister |= Z;
+					} else {
+						statusRegister &= ~Z;
+					}
+					if((dataLatch & S) > 0) {
+						statusRegister |= S;
+					} else {
+						statusRegister &= ~S;
+					}
+					break;
+			}
 			break;
 		case 0x10:										// BPL, Relative
 			
 			break;
 		case 0x11:										// ORA, Indirect Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				effectiveAddressLow = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow + 1);
+				effectiveAddressHigh = dataBus.read();
+				break;
+			case 4:
+				BALY = effectiveAddressLow + indexY;
+				carry = ((effectiveAddressLow ^ BALY) >> 8) & 1;
+				BALY &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				if(carry == 0) {
+					done = true;
+				}
+				break;
+			case 5:
+				BALY = (effectiveAddressLow + indexY) & 0xFF;
+				effectiveAddressHigh = addressLatchHigh + 1;
+				done = true;
+				break;
+			}
+			if(done) {
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x15:										// ORA, Zero Page Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+			}
 			break;
 		case 0x16:										// ASL, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x18:										// CLC
-			
+			if(tN == 1) {
+				statusRegister &= ~C;
+				tN = -1;
+			}
 			break;
 		case 0x19:										// ORA, Absolute Indexed Y
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					addressLatchHigh = dataBus.read();
+					break;
+				case 3:
+					BALY = addressLatchLow + indexY;
+					carry = ((BALY ^ addressLatchLow) >> 8) & 1;
+					effectiveAddressHigh = addressLatchHigh + carry;
+					effectiveAddressLow = BALY & 0xFF;
+					if(carry == 0) {
+						done = true;
+					}
+					break;
+				case 4:
+					effectiveAddressLow = (addressLatchLow + indexY) & 0xFF;
+					effectiveAddressHigh = addressLatchHigh + 1;
+					done = true;
+					break;
+			}
+			if(done) {
+				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				dataLatch = dataBus.read();
+				accumulator = (accumulator | dataLatch) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}	
 			break;
 		case 0x1D:										// ORA, Absolute Indexed X
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				BALX = addressLatchLow + indexX;
+				carry = ((BALX ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				effectiveAddressLow = BALX & 0xFF;
+				if(carry == 0) {
+					done = true;
+				}
+				break;
+			case 4:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = addressLatchHigh + 1;
+				done = true;
+				break;
+		}
+		if(done) {
+			addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+			dataLatch = dataBus.read();
+			accumulator = (accumulator | dataLatch) & 0xFF;
+			tN = -1;
+			if(accumulator == 0) {
+				statusRegister |= Z;
+			} else {
+				statusRegister &= ~Z;
+			}
+			if((accumulator & S) > 0) {
+				statusRegister |= S;
+			} else {
+				statusRegister &= ~S;
+			}
+		}	
 			break;
 		case 0x1E:										// ASL, Absolute Indexed X
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x20:										// JSR, Absolute
 			
 			break;
@@ -133,8 +547,44 @@ public class CPU {
 			
 			break;
 		case 0x26:										// ROL, Zero Page
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				if(shouldCarry) {
+					dataLatch |= 1;
+				}
+				break;
+			case 4:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x28:										// PLP
 			
 			break;
@@ -142,7 +592,29 @@ public class CPU {
 			
 			break;
 		case 0x2A:										// ROL, Accumulator
-			
+			if(tN == 1) {
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((accumulator & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator << 1) & 0xFF;
+				if(shouldCarry) {
+					accumulator |= 1;
+				}
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & 80) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x2C:										// BIT, Absolute
 			
@@ -151,8 +623,48 @@ public class CPU {
 			
 			break;
 		case 0x2E:										// ROL, Absolute
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				if(shouldCarry) {
+					dataLatch |= 1;
+				}
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x30:										// BMI, Relative
 			
 			break;
@@ -163,10 +675,53 @@ public class CPU {
 			
 			break;
 		case 0x36:										// ROL, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				if(shouldCarry) {
+					dataLatch |= 1;
+				}
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x38:										// SEC
-			
+			if(tN == 1) {
+				statusRegister |= C;
+				tN = -1;
+			}
 			break;
 		case 0x39:										// AND, Absolute Indexed Y
 			
@@ -175,8 +730,56 @@ public class CPU {
 			
 			break;
 		case 0x3E:										// ROL, Absolute Indexed X
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				if(shouldCarry) {
+					dataLatch |= 1;
+				}
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x40:										// RTI
 			
 			break;
@@ -187,8 +790,40 @@ public class CPU {
 			
 			break;
 		case 0x46:										// LSR, Zero Page
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				if((dataLatch & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch >> 1) & 0xFF;
+				break;
+			case 4:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x48:										// PHA
 			
 			break;
@@ -196,7 +831,25 @@ public class CPU {
 			
 			break;
 		case 0x4A:										// LSR, Accumulator
-			
+			if(tN == 1) {
+				if((accumulator & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator >> 1) & 0xFF;
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & 80) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x4C:										// JMP, Absolute
 			
@@ -205,8 +858,44 @@ public class CPU {
 			
 			break;
 		case 0x4E:										// LSR, Absolute
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				if((dataLatch & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch >> 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x50:										// BVC, Relative
 			
 			break;
@@ -217,10 +906,49 @@ public class CPU {
 			
 			break;
 		case 0x56:										// LSR, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				if((dataLatch & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch >> 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x58:										// CLI
-			
+			if(tN == 1) {
+				statusRegister &= ~I;
+				tN = -1;
+			}
 			break;
 		case 0x59:										// EOR, Absolute Indexed Y
 			
@@ -229,8 +957,52 @@ public class CPU {
 			
 			break;
 		case 0x5E:										// LSR, Absolute Indexed X
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				if((dataLatch & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch >> 1) & 0xFF;
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x60:										// RTS
 			
 			break;
@@ -241,8 +1013,44 @@ public class CPU {
 			
 			break;
 		case 0x66:										// ROR, Zero Page
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((accumulator & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator >> 1) & 0xFF;
+				if(shouldCarry) {
+					accumulator |= 0x80;
+				}
+				break;
+			case 4:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x68:										// PLA
 			
 			break;
@@ -250,7 +1058,29 @@ public class CPU {
 			
 			break;
 		case 0x6A:										// ROR, Accumulator
-			
+			if(tN == 1) {
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((accumulator & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator >> 1) & 0xFF;
+				if(shouldCarry) {
+					accumulator |= 0x80;
+				}
+				tN = -1;
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((accumulator & 80) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+			}
 			break;
 		case 0x6C:										// JMP, Indirect
 			
@@ -259,8 +1089,48 @@ public class CPU {
 			
 			break;
 		case 0x6E:										// ROR, Absolute
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((dataLatch & 0x80) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				dataLatch = (dataLatch << 1) & 0xFF;
+				if(shouldCarry) {
+					dataLatch |= 1;
+				}
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x70:										// BVS, Relative
 			
 			break;
@@ -271,10 +1141,53 @@ public class CPU {
 			
 			break;
 		case 0x76:										// ROR, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((accumulator & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator >> 1) & 0xFF;
+				if(shouldCarry) {
+					accumulator |= 0x80;
+				}
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0x78:										// SEI
-			
+			if(tN == 1) {
+				statusRegister |= I;
+				tN = -1;
+			}
 			break;
 		case 0x79:										// ADC, Absolute Indexed Y
 			
@@ -283,61 +1196,372 @@ public class CPU {
 			
 			break;
 		case 0x7E:										// ROR, Absolute Indexed X
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				final boolean shouldCarry = (statusRegister & C) == 1;
+				if((accumulator & 1) > 0) {
+					statusRegister |= C;
+				} else {
+					statusRegister &= ~C;
+				}
+				accumulator = (accumulator >> 1) & 0xFF;
+				if(shouldCarry) {
+					accumulator |= 0x80;
+				}
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;								
 		case 0x81:										// STA, Indexed Indirect
-			
+			switch(tN) {
+				case 1:	
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(addressLatchLow);
+					dataBus.read();
+					break;
+				case 3:
+					addressBus.assertAddress(addressLatchLow + indexX);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 4:
+					addressBus.assertAddress(addressLatchLow + indexX + 1);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 5:
+					dataBus.latch(accumulator);
+					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					tN = -1;
+					break;
+			}
 			break;
 		case 0x84:										// STY, Zero Page
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				effectiveAddressLow = dataBus.read();
+				break;
+			case 2:
+				dataBus.latch(indexY);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				break;
+		}
 			break;
 		case 0x85:										// STA, Zero Page
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 2:
+					dataBus.latch(accumulator);
+					addressBus.assertAddressAndWrite(effectiveAddressLow);
+					tN = -1;
+					break;
+			}
 			break;
 		case 0x86:										// STX, Zero Page
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				effectiveAddressLow = dataBus.read();
+				break;
+			case 2:
+				dataBus.latch(indexX);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				break;
+		}
 			break;
 		case 0x88:										// DEY
-			
+			if(tN == 1) {
+				indexY = (indexY - 1) & 0xFF;
+				tN = -1;
+				if((indexY & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexY == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0x8A:										// TXA
-			
+			if(tN == 1) {
+				accumulator = indexX;
+				tN = -1;
+				if((accumulator & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0x8C:										// STY, Absolute
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 3:
+					dataBus.latch(indexY);
+					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					tN = -1;
+					break;
+			}
 			break;
 		case 0x8D:										// STA, Absolute
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 3:
+					dataBus.latch(accumulator);
+					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					tN = -1;
+					break;
+			}
 			break;
 		case 0x8E:										// STX, Absolute
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 3:
+					dataBus.latch(indexX);
+					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					tN = -1;
+					break;
+		}
 			break;
 		case 0x90:										// BCC, Relative
 			
 			break;
 		case 0x91:										// STA, Indirect Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				effectiveAddressLow = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow + 1);
+				effectiveAddressHigh = dataBus.read();
+				break;
+			case 4:
+				addressLatchLow = effectiveAddressLow + indexY;
+				carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+				addressLatchHigh = effectiveAddressHigh + carry;
+				addressLatchLow &= 0xFF;
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataBus.read();
+				break;
+			case 5:
+				dataBus.latch(accumulator);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				break;					
+			}
 			break;
 		case 0x94:										// STY, Zero Page Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = 0;
+				dataBus.latch(indexY);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | (effectiveAddressHigh << 8));
+				tN = -1;
+				break;
+			}
 			break;
 		case 0x95:										// STA, Zero Page Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = 0;
+				dataBus.latch(accumulator);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | (effectiveAddressHigh << 8));
+				tN = -1;
+				break;
+			}
 			break;
 		case 0x96:										// STX, Zero Page Indexed Y
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexY) & 0xFF;
+				effectiveAddressHigh = 0;
+				dataBus.latch(indexX);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | (effectiveAddressHigh << 8));
+				tN = -1;
+				break;
+			}
 			break;
 		case 0x98:										// TYA
-			
+			if(tN == 1) {
+				accumulator = indexY;
+				tN = -1;
+				if((accumulator & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0x99:										// STA, Absolute Indexed Y
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					addressLatchHigh = dataBus.read();
+					break;
+				case 3:
+					effectiveAddressLow = addressLatchLow + indexY;
+					carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+					effectiveAddressHigh = addressLatchHigh + carry;
+					effectiveAddressLow &= 0xFF;
+					addressBus.assertAddress(effectiveAddressLow);
+					break;
+				case 4:
+					dataBus.latch(accumulator);
+					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					tN = -1;
+					break;
+			}
 			
 			break;
 		case 0x9A:										// TXS
-			
+			if(tN == 1) {
+				stackPointer = indexX;
+				tN = -1;
+				if((stackPointer & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(stackPointer == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0x9D:										// STA, Absolute Indexed X
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				effectiveAddressLow &= 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 4:
+				dataBus.latch(accumulator);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				break;
+		}
 			break;
 		case 0xA0:										// LDY, Immediate
 			if(tN == 1) {
@@ -357,7 +1581,38 @@ public class CPU {
 			}
 			break;
 		case 0xA1:										// LDA, Indexed Indirect
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(addressLatchLow);
+					break;
+				case 3:
+					addressBus.assertAddress(addressLatchLow + indexX);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 4:
+					addressBus.assertAddress(addressLatchLow + indexX + 1);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 5:
+					addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+					accumulator = dataBus.read();
+					tN = -1;
+					if((accumulator & S) == 0) {
+						statusRegister &= ~S;
+					} else {
+						statusRegister |= S;
+					}
+					if(accumulator == 0) {
+						statusRegister |= Z;
+					} else {
+						statusRegister &= ~Z;
+					}
+					break;
+			}
 			break;
 		case 0xA2:										// LDX, Immediate
 			if(tN == 1) {
@@ -437,7 +1692,20 @@ public class CPU {
 			}
 			break;
 		case 0xA8:										// TAY
-			
+			if(tN == 1) {
+				indexY = accumulator;
+				tN = -1;
+				if((indexY & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexY == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xA9:										// LDA, Immediate
 			if(tN == 1) {
@@ -457,7 +1725,20 @@ public class CPU {
 			}
 			break;
 		case 0xAA:										// TAX
-			
+			if(tN == 1) {
+				indexX = accumulator;
+				tN = -1;
+				if((indexX & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexX == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xAC:										// LDY, Absolute
 			if(tN == 1) {
@@ -532,34 +1813,322 @@ public class CPU {
 			
 			break;
 		case 0xB1:										// LDA, Indirect Indexed
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(addressLatchLow);
+					effectiveAddressLow = dataBus.read();
+					break;
+				case 3:
+					addressBus.assertAddress(addressLatchLow + 1);
+					effectiveAddressHigh = dataBus.read();
+					break;
+				case 4:
+					BALY = effectiveAddressLow + indexY;
+					carry = ((BALY ^ effectiveAddressLow) >> 8) & 1;
+					addressBus.assertAddress((BALY & 0xFF) | (effectiveAddressHigh + carry) << 8);
+					if(carry == 0) {
+						done = true;
+					}
+					break;
+				case 5:
+					addressBus.assertAddress( ((effectiveAddressLow + indexY) & 0xFF) | (effectiveAddressHigh + 1) << 8);
+					done = true;
+					break;
+			}
+			if(done) {
+				accumulator = dataBus.read();
+				tN = -1;
+				if((accumulator & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xB4:										// LDY, Zero Page Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = 0;
+				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				indexY = dataBus.read();
+				tN = -1;
+				if((indexY & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexY == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				
+				break;
+			}
 			break;
 		case 0xB5:										// LDA, Zero Page Indexed
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = 0;
+				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				accumulator = dataBus.read();
+				tN = -1;
+				if((accumulator & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				
+				break;
+			}
 			break;
 		case 0xB6:										// LDX, Zero Page Indexed Y
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = 0;
+				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				indexX = dataBus.read();
+				tN = -1;
+				if((indexX & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexX == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				
+				break;
+			}
 			break;
 		case 0xB8:										// CLV
-			
+			if(tN == 1) {
+				statusRegister &= ~V;
+				tN = -1;
+			}
 			break;
 		case 0xB9:										// LDA, Absolute Indexed Y
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexY;
+				carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress((effectiveAddressLow & 0xFF) | effectiveAddressHigh << 8);
+				if(carry == 0) {
+					done = true;
+				}
+				break;
+			case 4:
+				effectiveAddressLow = (addressLatchLow + indexY) & 0xFF;
+				effectiveAddressHigh = addressLatchHigh + 1;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				done = true;
+				break;
+		}
+		if(done) {
+			accumulator = dataBus.read();
+			tN = -1;
+			if((accumulator & S) == 0) {
+				statusRegister &= ~S;
+			} else {
+				statusRegister |= S;
+			}
+			if(accumulator == 0) {
+				statusRegister |= Z;
+			} else {
+				statusRegister &= ~Z;
+			}
+		}
 			break;
 		case 0xBA:										// TSX
-			
+			if(tN == 1) {
+				indexX = stackPointer;
+				tN = -1;
+				if((indexY & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexY == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xBC:										// LDY, Absolute Indexed X
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress((effectiveAddressLow & 0xFF) | effectiveAddressHigh << 8);
+				if(carry == 0) {
+					done = true;
+				}
+				break;
+			case 4:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressHigh = addressLatchHigh + 1;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				done = true;
+				break;
+		}
+		if(done) {
+			indexY = dataBus.read();
+			tN = -1;
+			if((indexY & S) == 0) {
+				statusRegister &= ~S;
+			} else {
+				statusRegister |= S;
+			}
+			if(indexY == 0) {
+				statusRegister |= Z;
+			} else {
+				statusRegister &= ~Z;
+			}
+		}
 			break;
 		case 0xBD:										// LDA, Absolute X
-			
+			switch(tN) {
+				case 1:
+					addressBus.assertAddress(programCounter++);
+					addressLatchLow = dataBus.read();
+					break;
+				case 2:
+					addressBus.assertAddress(programCounter++);
+					addressLatchHigh = dataBus.read();
+					break;
+				case 3:
+					effectiveAddressLow = addressLatchLow + indexX;
+					carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+					effectiveAddressHigh = addressLatchHigh + carry;
+					addressBus.assertAddress((effectiveAddressLow & 0xFF) | effectiveAddressHigh << 8);
+					if(carry == 0) {
+						done = true;
+					}
+					break;
+				case 4:
+					effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+					effectiveAddressHigh = addressLatchHigh + 1;
+					addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+					done = true;
+					break;
+			}
+			if(done) {
+				accumulator = dataBus.read();
+				tN = -1;
+				if((accumulator & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(accumulator == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xBE:										// LDX, Absolute Indexed Y
-			
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexY;
+				carry = (effectiveAddressLow ^ addressLatchLow) >> 8 & 1;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress((effectiveAddressLow & 0xFF) | effectiveAddressHigh << 8);
+				if(carry == 0) {
+					done = true;
+				}
+				break;
+			case 4:
+				effectiveAddressLow = (addressLatchLow + indexY) & 0xFF;
+				effectiveAddressHigh = addressLatchHigh + 1;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				done = true;
+				break;
+		}
+		if(done) {
+			indexX = dataBus.read();
+			tN = -1;
+			if((indexX & S) == 0) {
+				statusRegister &= ~S;
+			} else {
+				statusRegister |= S;
+			}
+			if(indexX == 0) {
+				statusRegister |= Z;
+			} else {
+				statusRegister &= ~Z;
+			}
+		}
 			break;
 		case 0xC0:										// CPY, Immediate
 		
@@ -574,16 +2143,69 @@ public class CPU {
 			
 			break;
 		case 0xC6:										// DEC, Zero Page
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				dataLatch = (dataLatch - 1) & 0xFF;
+				break;
+			case 4:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xC8:										// INY
-			
+			if(tN == 1) {
+				indexY = (indexY + 1) & 0xFF;
+				tN = -1;
+				if((indexY & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexY == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xC9:										// CMP, Immediate
 			
 			break;
 		case 0xCA:										// DEX
-			
+			if(tN == 1) {
+				indexX = (indexX - 1) & 0xFF;
+				tN = -1;
+				if((indexX & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexX == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xCC:										// CPY, Absolute
 			
@@ -592,8 +2214,39 @@ public class CPU {
 			
 			break;
 		case 0xCE:										// DEC, Absolute
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				dataLatch = (dataLatch - 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xD0:										// BNE, Relative
 			
 			break;
@@ -604,10 +2257,44 @@ public class CPU {
 			
 			break;
 		case 0xD6:										// DEC, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				dataLatch = (dataLatch - 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xD8:										// CLD
-			
+			if(tN == 1) {
+				statusRegister &= ~D;
+				tN = -1;
+			}
 			break;
 		case 0xD9:										// CMP, Absolute Indexed Y
 			
@@ -616,8 +2303,47 @@ public class CPU {
 			
 			break;
 		case 0xDE:										// DEC, Absolute Indexed X
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				dataLatch = (dataLatch - 1) & 0xFF;
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xE0:										// CPX, Immediate
 			
 			break;
@@ -631,10 +2357,50 @@ public class CPU {
 		
 			break;
 		case 0xE6:										// INC, Zero Page
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(addressLatchLow);
+				dataLatch = dataBus.read();
+				break;
+			case 3:
+				dataLatch = (dataLatch + 1) & 0xFF;
+				break;
+			case 4:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xE8:										// INX
-			
+			if(tN == 1) {
+				indexX = (indexX + 1) & 0xFF;
+				tN = -1;
+				if((indexX & S) == 0) {
+					statusRegister &= ~S;
+				} else {
+					statusRegister |= S;
+				}
+				if(indexX == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+			}
 			break;
 		case 0xE9:										// SBC, Immediate
 			
@@ -652,8 +2418,39 @@ public class CPU {
 			
 			break;
 		case 0xEE:										// INC, Absolute
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				dataLatch = (dataLatch + 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xF0:										// BEQ, Relative
 			
 			break;
@@ -664,10 +2461,44 @@ public class CPU {
 			
 			break;
 		case 0xF6:										// INC, Zero Page Indexed
-			
-			break;
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				addressBus.assertAddress(effectiveAddressLow);
+				break;
+			case 3:
+				addressBus.assertAddress(effectiveAddressLow);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				dataLatch = (dataLatch + 1) & 0xFF;
+				break;
+			case 5:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
+		}
+		break;
 		case 0xF8:										// SED
-			
+			if(tN == 1) {
+				statusRegister |= D;
+				tN = -1;
+			}
 			break;
 		case 0xF9:										// SBC, Absolute Indexed Y
 			
@@ -676,10 +2507,52 @@ public class CPU {
 			
 			break;
 		case 0xFE:										// INC, Absolute Indexed X
-			
-			break;
-		
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter++);
+				addressLatchLow = dataBus.read();
+				break;
+			case 2:
+				addressBus.assertAddress(programCounter++);
+				addressLatchHigh = dataBus.read();
+				break;
+			case 3:
+				effectiveAddressLow = addressLatchLow + indexX;
+				carry = ((effectiveAddressLow ^ addressLatchLow) >> 8) & 1;
+				effectiveAddressLow &= 0xFF;
+				effectiveAddressHigh = addressLatchHigh + carry;
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 4:
+				addressBus.assertAddress(effectiveAddressLow | effectiveAddressHigh << 8);
+				dataLatch = dataBus.read();
+				break;
+			case 5:
+				dataLatch = (dataLatch + 1) & 0xFF;
+				break;
+			case 6:
+				dataBus.latch(dataLatch);
+				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				tN = -1;
+				if(dataLatch == 0) {
+					statusRegister |= Z;
+				} else {
+					statusRegister &= ~Z;
+				}
+				if((dataLatch & S) > 0) {
+					statusRegister |= S;
+				} else {
+					statusRegister &= ~S;
+				}
+				break;
 		}
+		break;
+		}
+	}
+
+	public int[] getStatusUpdate() {
+		return new int[] { programCounter, stackPointer, statusRegister, accumulator, indexX, indexY};
 	}
 	
 	
