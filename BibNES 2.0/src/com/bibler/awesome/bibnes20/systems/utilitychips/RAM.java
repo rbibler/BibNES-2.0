@@ -10,12 +10,18 @@ public class RAM {
 		this.size = size;
 		memoryArray = new int[size];
 	}
+	
 	public RAM(int[] memoryArray) {
 		this.memoryArray = memoryArray;
 		size = memoryArray.length;
 	}
 	public int read(int address) {
 		return memoryArray[address % size];
+	}
+
+	public void write(int address, int data) {
+		memoryArray[address % size] = data;
+		
 	}
 
 }

@@ -11,5 +11,5 @@ public class DataBus {
 	public int read() {
 		return dataLatch;
 	}
-
+	
 }

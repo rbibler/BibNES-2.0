@@ -16,4 +16,9 @@ public class ROM {
 	public int read(int address) {
 		return memoryArray[address % size];
 	}
+
+	public void write(int address, int data) {
+		// TODO Auto-generated method stub
+		
+	}
 }
