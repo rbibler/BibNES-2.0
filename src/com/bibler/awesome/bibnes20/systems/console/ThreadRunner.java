@@ -41,7 +41,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	
 	private void runCycle() {
 		final int cycleResult = cpu.cycle();
-		System.out.println(cycleResult);
+		//System.out.println(cycleResult);
 		if(cycleResult == 0) {
 			notify("CPU_UPDATE", cpu.getStatusUpdate());
 			if(step) {
