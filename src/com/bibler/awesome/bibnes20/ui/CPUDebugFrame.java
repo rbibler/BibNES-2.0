@@ -3,13 +3,23 @@ package com.bibler.awesome.bibnes20.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
 
 import javax.swing.BorderFactory;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import com.bibler.awesome.bibnes20.communications.Notifiable;
+import com.bibler.awesome.bibnes20.communications.Notifier;
+import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
+import com.bibler.awesome.bibnes20.utilities.FileUtils;
 
 public class CPUDebugFrame extends JFrame implements Notifiable {
 
@@ -20,6 +30,7 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 	private JPanel contentPane;
 	private CPUDebugPanel debugPanel;
 	private CPUDebugInputPanel inputPanel;
+	private ThreadRunner runner;
 
 	/**
 	 * Create the frame.
@@ -44,10 +55,44 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 		debugPanel = new CPUDebugPanel(inputPanel);
 		splitPane.add(debugPanel, BorderLayout.LINE_END);
 		
-		
+		initializeMenu();
 		
 		pack();
 		setVisible(true);
+	}
+	
+	public void setRunner(ThreadRunner runner) {
+		this.runner = runner;
+	}
+	
+	private void initializeMenu() {
+		JMenuBar menuBar = new JMenuBar();
+		JMenu file = new JMenu("File");
+		menuBar.add(file);
+		setJMenuBar(menuBar);
+		JMenuItem loadBin = new JMenuItem("Load Bin");
+		file.add(loadBin);
+		loadBin.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				loadBin();
+			}
+			
+		});
+	}
+	
+	protected void loadBin() {
+		JFileChooser chooser = new JFileChooser();
+		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+			File f = chooser.getSelectedFile();
+			int[] rom = FileUtils.loadBinFromFile(f);
+			rom[0x7FFD] = 0x80;
+			int[] ram = new int[0x2000];
+			runner.takeNotice("RUN", new int[][] {rom, ram});
+		}
+		
+		
 	}
 	
 	public void updateDebugStatus(int[] statusUpdateArray) {

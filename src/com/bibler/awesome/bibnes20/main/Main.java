@@ -19,6 +19,7 @@ public class Main {
 		console.getMotherboard().setCPURam(setupTestRAM());
 		//console.insertGamePak(GamePakFactory.createGamePakFromRoms(testRom, null));
 		ThreadRunner runner = new ThreadRunner();
+		frame.setRunner(runner);
 		frame.getDebugPanel().getButtonPanel().registerObjectToNotify(runner);
 		runner.registerObjectToNotify(frame);
 		runner.setConsole(console);

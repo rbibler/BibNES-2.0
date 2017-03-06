@@ -29,8 +29,6 @@ public class CPU {
 	private int effectiveAddressHigh;
 	private int dataLatch;
 	
-	
-	
 	private int tN;
 	
 	public CPU(AddressBus addressBus, DataBus dataBus) {
@@ -64,6 +62,7 @@ public class CPU {
 	private void fetchInstruction() {
 		addressBus.assertAddress(programCounter++);
 		instructionLatch = dataBus.read();
+		System.out.println(Integer.toHexString(instructionLatch).toUpperCase());
 	}
 	
 	private void executeInstruction() {
