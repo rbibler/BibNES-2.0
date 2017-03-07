@@ -29,6 +29,8 @@ public class CPU {
 	private int effectiveAddressHigh;
 	private int dataLatch;
 	
+	private int instCount;
+	
 	private boolean debug = true;
 	
 	private int tN;
@@ -52,8 +54,9 @@ public class CPU {
 	public int cycle() {
 		if(tN == 0) {
 			fetchInstruction();
+			instCount++;
 			if(debug) {
-				System.out.println("" + opCodes[instructionLatch]);
+				System.out.println("" + instCount + ". " + opCodes[instructionLatch]);
 			}
 			tN++;
 			return tN;
@@ -988,7 +991,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
-				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8)); 
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8)); 
 				dataLatch = dataBus.read();
 				accumulator = (accumulator & dataLatch) & 0xFF;
 				tN = -1;
@@ -1536,7 +1539,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
-				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
 				dataLatch = dataBus.read();
 				tN = -1;
 				accumulator = (accumulator ^ dataLatch) & 0xFF;
@@ -2148,7 +2151,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
-				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
 				dataLatch = dataBus.read();
 				tN = -1;
 				result = (dataLatch + accumulator + (statusRegister & C));
@@ -2619,12 +2622,13 @@ public class CPU {
 				carry = ((effectiveAddressLow ^ BALY) >> 8) & 1;
 				BALY &= 0xFF;
 				effectiveAddressHigh = addressLatchHigh + carry;
-				addressBus.assertAddress(addressLatchLow | addressLatchHigh << 8);
+				addressBus.assertAddress(BALY | effectiveAddressHigh << 8);
 				dataBus.read();
 				break;
 			case 5:
+				BALY = (effectiveAddressLow + indexY) & 0xFF;
 				dataBus.latch(accumulator);
-				addressBus.assertAddressAndWrite(addressLatchLow | addressLatchHigh << 8);
+				addressBus.assertAddressAndWrite(BALY | effectiveAddressHigh << 8);
 				tN = -1;
 				break;					
 			}
@@ -3076,7 +3080,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
-				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
 				accumulator = dataBus.read();
 				tN = -1;
 				if((accumulator & S) == 0) {
@@ -3162,7 +3166,7 @@ public class CPU {
 				dataLatch = dataBus.read();
 				break;
 			case 3:
-				effectiveAddressLow = (addressLatchLow + indexX) & 0xFF;
+				effectiveAddressLow = (addressLatchLow + indexY) & 0xFF;
 				effectiveAddressHigh = 0;
 				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
 				indexX = dataBus.read();
@@ -3742,7 +3746,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
-				addressBus.assertAddress(effectiveAddressLow | (effectiveAddressHigh << 8));
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
 				dataLatch = dataBus.read();
 				tN = -1;
 				result = accumulator - dataLatch;
@@ -4366,6 +4370,7 @@ public class CPU {
 				break;
 			}
 			if(done) {
+				addressBus.assertAddress(BALY | (effectiveAddressHigh << 8));
 				dataLatch = dataBus.read();
 				result = ~dataLatch + (statusRegister & C) + accumulator;
 				if(result >= 0) {

@@ -21,8 +21,8 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	}
 	
 	public void startEmulator() {
-		Thread t = new Thread(this);
-		t.start();
+		//Thread t = new Thread(this);
+		//t.start();
 	}
 	
 	int cycleCount = 0;
@@ -48,6 +48,14 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		}
 	}
 	
+	private void step() {
+		int cycleResult = -1;
+		do {
+			cycleResult = cpu.cycle();
+		} while(cycleResult != 0);
+		notify("CPU_UPDATE", cpu.getStatusUpdate());
+	}
+	
 	public synchronized void pause() {
 		pause = true;
 	}
@@ -64,8 +72,9 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 			console.setCPURam(romRam[1]);
 			startEmulator();
 		} else if(message.equalsIgnoreCase("STEP")) {
-			step = true;
-			resume();
+			//step = true;
+			//resume();
+			step();
 		} else if(message.equalsIgnoreCase("RESET")) {}
 	}
 }
