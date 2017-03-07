@@ -17,6 +17,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	public void setConsole(Console console) {
 		this.console = console;
 		cpu = console.getMotherboard().getCPU();
+		pause = true;
 	}
 	
 	public void startEmulator() {
@@ -31,20 +32,17 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		while(!Thread.interrupted()) {
 			if(!pause) {
 				runCycle();
-			} else {
-				try {
-					Thread.sleep(120);
-				} catch(InterruptedException e) {}
-			}
+			} 
 		}
 	}
 	
 	private void runCycle() {
 		final int cycleResult = cpu.cycle();
-		//System.out.println(cycleResult);
+		System.out.println(cycleResult);
 		if(cycleResult == 0) {
 			notify("CPU_UPDATE", cpu.getStatusUpdate());
 			if(step) {
+				step = false;
 				pause();
 			}
 		}

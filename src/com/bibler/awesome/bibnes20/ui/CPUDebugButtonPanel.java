@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import com.bibler.awesome.bibnes20.communications.Notifier;
 import com.bibler.awesome.bibnes20.utilities.InputUtilities;
@@ -26,7 +27,14 @@ public class CPUDebugButtonPanel extends Notifier {
 	
 	public CPUDebugButtonPanel(CPUDebugInputPanel inputPanel) {
 		this.inputPanel = inputPanel;
-		panel = new JPanel();
+		panel = new JPanel() {
+			@Override
+	        public void addNotify() {
+	            super.addNotify();
+	            SwingUtilities.getRootPane(stepButton).setDefaultButton(stepButton);
+	        }
+			
+		};
 		panel.setLayout(new BorderLayout(0, 0));
 		initialize();
 	}
@@ -42,7 +50,6 @@ public class CPUDebugButtonPanel extends Notifier {
 		stepButton.addActionListener(listener);
 		stepButton.setActionCommand("STEP");
 		panel.add(stepButton, BorderLayout.CENTER);
-		
 		resetButton = new JButton("Reset");
 		resetButton.addActionListener(listener);
 		resetButton.setActionCommand("RESET");
