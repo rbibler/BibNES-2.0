@@ -63,6 +63,8 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	public synchronized void resume() {
 		pause = false;
 	}
+	
+	private boolean debug = true;
 
 	@Override
 	public void takeNotice(String message, Object messagePacket) {
@@ -74,7 +76,14 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		} else if(message.equalsIgnoreCase("STEP")) {
 			//step = true;
 			//resume();
-			step();
+			if(debug) {
+				debug = false;
+				for(int i = 0; i < 541; i++) {
+					step();
+				}
+			} else {
+				step();
+			}
 		} else if(message.equalsIgnoreCase("RESET")) {}
 	}
 }

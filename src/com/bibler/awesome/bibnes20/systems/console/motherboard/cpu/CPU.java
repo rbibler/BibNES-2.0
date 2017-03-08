@@ -329,7 +329,7 @@ public class CPU {
 			case 1:
 				addressBus.assertAddress(programCounter++);
 				dataLatch = dataBus.read();
-				if((statusRegister & S) == 1) {											// Branch not taken. Done with inst.
+				if((statusRegister & S) > 0 ) {											// Branch not taken. Done with inst.
 					tN = -1;
 				}
 				break;
@@ -1481,7 +1481,7 @@ public class CPU {
 			case 1:
 				addressBus.assertAddress(programCounter++);
 				dataLatch = dataBus.read();
-				if((statusRegister & V) == 1) {											// Branch not taken. Done with inst.
+				if((statusRegister & V) > 0) {											// Branch not taken. Done with inst.
 					tN = -1;
 				}
 				break;
@@ -2575,7 +2575,7 @@ public class CPU {
 			case 1:
 				addressBus.assertAddress(programCounter++);
 				dataLatch = dataBus.read();
-				if((statusRegister & C) == 1) {											// Branch not taken. Done with inst.
+				if((statusRegister & C) > 0) {											// Branch not taken. Done with inst.
 					tN = -1;
 				}
 				break;
@@ -3688,7 +3688,7 @@ public class CPU {
 			case 1:
 				addressBus.assertAddress(programCounter++);
 				dataLatch = dataBus.read();
-				if((statusRegister & Z) == 1) {											// Branch not taken. Done with inst.
+				if((statusRegister & Z) > 0) {											// Branch not taken. Done with inst.
 					tN = -1;
 				}
 				break;
@@ -4048,8 +4048,9 @@ public class CPU {
 				}
 				accumulator = result & 0xFF;
 				tN = -1;
-			break;
+				break;
 			}
+			break;
 		case 0xE4:										// CPX, Zero Page
 			switch(tN) {
 			case 1:
@@ -4194,10 +4195,9 @@ public class CPU {
 			}
 			break;
 		case 0xEA:										// NOP
-			programCounter++;
-			if(tN == 2) {
+			if(tN == 1) {
 				tN = -1;
-			}
+			} 
 			break;
 		case 0xEC:										// CPX, Absolute
 			switch(tN) {
