@@ -619,11 +619,11 @@ public class CPU {
 				break;
 			case 3:
 				dataBus.latch((programCounter >> 8) & 0xFF); 
-				addressBus.assertAddressAndWrite(stackPointer--);
+				addressBus.assertAddressAndWrite(0x100 + stackPointer--);
 				break;
 			case 4:
 				dataBus.latch(programCounter & 0xFF);
-				addressBus.assertAddressAndWrite(stackPointer--);
+				addressBus.assertAddressAndWrite(0x100 + stackPointer--);
 				break;
 			case 5:
 				addressBus.assertAddress(programCounter++);

@@ -9,6 +9,7 @@ public class AddressBus {
 	private RAM cpuRam;
 	private RAM ppuRam;
 	private GamePak gamePak;
+	private int gamePakAddressStart = 0x8000;			// NORMALLY 0x8000
 	
 	
 	private int address;
@@ -25,7 +26,7 @@ public class AddressBus {
 		this.address = address;
 		if(address < 0x2000) {
 			dataBus.latch(cpuRam.read(address));
-		} else if(address >= 0x8000) {
+		} else if(address >= gamePakAddressStart) {
 			dataBus.latch(gamePak.readPrgRom(address));
 		}
 	}
@@ -35,7 +36,7 @@ public class AddressBus {
 		final int data = dataBus.read();
 		if(address < 0x2000) {
 			cpuRam.write(address, data);
-		} else if(address >= 0x8000) {
+		} else if(address >= gamePakAddressStart) {
 			gamePak.writePrgRom(address, data);
 		}
 	}
