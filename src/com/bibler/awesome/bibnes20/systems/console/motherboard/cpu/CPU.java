@@ -1939,7 +1939,7 @@ public class CPU {
 				if(result == 0) {
 					statusRegister |= Z;
 				} else {
-					statusRegister &= ~C;
+					statusRegister &= ~Z;
 				}
 				if((result & S) > 0) {
 					statusRegister |= S;

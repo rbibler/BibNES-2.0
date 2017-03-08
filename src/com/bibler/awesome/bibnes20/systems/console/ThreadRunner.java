@@ -78,7 +78,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 			//resume();
 			if(debug) {
 				debug = false;
-				for(int i = 0; i < 541; i++) {
+				for(int i = 0; i < 587; i++) {
 					step();
 				}
 			} else {
