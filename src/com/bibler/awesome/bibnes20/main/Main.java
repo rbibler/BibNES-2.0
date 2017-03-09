@@ -23,8 +23,8 @@ public class Main {
 		frame.getDebugPanel().getButtonPanel().registerObjectToNotify(runner);
 		runner.registerObjectToNotify(frame);
 		runner.setConsole(console);
-		runner.pause();
-		runner.startEmulator();
+		//runner.pause();
+		//runner.startEmulator();
 	}
 	
 	private static ROM setupTestROM() {

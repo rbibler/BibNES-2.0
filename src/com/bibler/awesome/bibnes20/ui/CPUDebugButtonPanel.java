@@ -62,10 +62,10 @@ public class CPUDebugButtonPanel extends Notifier {
 		public void actionPerformed(ActionEvent arg0) {
 			Object obj = this;
 			if(arg0.getActionCommand() == "RUN") {
-				final String s = inputPanel.getInput();
-				int[] rom = InputUtilities.parseMemoryInputRom(s);
-				int[] ram = InputUtilities.parseMemoryInputRam(s);
-				obj = new int[][] {rom, ram};
+				//final String s = inputPanel.getInput();
+				//int[] rom = InputUtilities.parseMemoryInputRom(s);
+				//int[] ram = InputUtilities.parseMemoryInputRam(s);
+				//obj = new int[][] {rom, ram};
 			}
 			CPUDebugButtonPanel.this.notify(arg0.getActionCommand(), obj);
 			

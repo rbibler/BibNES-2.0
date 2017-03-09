@@ -12,7 +12,8 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	private CPU cpu;
 	
 	private boolean pause;
-	private boolean step;
+	private boolean pauseAfterStep;
+	private Thread t;
 	
 	public void setConsole(Console console) {
 		this.console = console;
@@ -21,8 +22,10 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	}
 	
 	public void startEmulator() {
-		//Thread t = new Thread(this);
-		//t.start();
+		if(t == null || !t.isAlive()) {
+			t = new Thread(this);
+			t.start();
+		}
 	}
 	
 	int cycleCount = 0;
@@ -31,24 +34,17 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	public void run() {
 		while(!Thread.interrupted()) {
 			if(!pause) {
-				runCycle();
+				step();
+				if(pauseAfterStep) {
+					pause = true;
+					pauseAfterStep = false;
+				}
 			} 
 		}
 	}
 	
-	private void runCycle() {
-		final int cycleResult = cpu.cycle();
-		System.out.println(cycleResult);
-		if(cycleResult == 0) {
-			notify("CPU_UPDATE", cpu.getStatusUpdate());
-			if(step) {
-				step = false;
-				pause();
-			}
-		}
-	}
-	
 	private void step() {
+		System.out.println("Step");
 		int cycleResult = -1;
 		do {
 			cycleResult = cpu.cycle();
@@ -64,26 +60,32 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		pause = false;
 	}
 	
-	private boolean debug = true;
+	private boolean debug = false;
 
 	@Override
 	public void takeNotice(String message, Object messagePacket) {
-		if(message.equalsIgnoreCase("RUN")) {
+		if(message.equalsIgnoreCase("LOAD")) {
 			int[][] romRam = (int[][]) messagePacket;
 			console.insertGamePak(GamePakFactory.createGamePakFromRoms(new ROM(romRam[0]), null));
 			console.setCPURam(romRam[1]);
-			startEmulator();
 		} else if(message.equalsIgnoreCase("STEP")) {
-			//step = true;
-			//resume();
+			if(t == null || t.isAlive() == false) {
+				startEmulator();
+			}
 			if(debug) {
 				debug = false;
 				for(int i = 0; i < 587; i++) {
 					step();
 				}
 			} else {
-				step();
+				pauseAfterStep = true;
+				resume();
 			}
-		} else if(message.equalsIgnoreCase("RESET")) {}
+		} else if(message.equalsIgnoreCase("RESET")) {
+			
+		} else if(message.equalsIgnoreCase("RUN")) {
+			startEmulator();
+			resume();
+		}
 	}
 }

@@ -89,7 +89,7 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 			int[] rom = FileUtils.loadBinFromFile(f);
 			rom[0x7FFD] = 0x80;
 			int[] ram = new int[0x2000];
-			runner.takeNotice("RUN", new int[][] {rom, ram});
+			runner.takeNotice("LOAD", new int[][] {rom, ram});
 		}
 		
 		
