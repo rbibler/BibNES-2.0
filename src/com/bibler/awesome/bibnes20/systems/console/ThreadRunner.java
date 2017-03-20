@@ -2,6 +2,7 @@ package com.bibler.awesome.bibnes20.systems.console;
 
 import com.bibler.awesome.bibnes20.communications.Notifiable;
 import com.bibler.awesome.bibnes20.communications.Notifier;
+import com.bibler.awesome.bibnes20.systems.console.motherboard.Motherboard;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePakFactory;
 import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
@@ -9,15 +10,23 @@ import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
 public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	
 	private Console console;
-	private CPU cpu;
+	private Motherboard motherboard;
 	
+	
+	// Control variables
 	private boolean pause;
 	private boolean pauseAfterStep;
 	private Thread t;
 	
+	// Timing variables
+	private long FPS = (long) (1000 / 60.0988);
+	private long lastFrameTime;
+	private int cpuDivider;
+	private int ppuDivider;
+	
 	public void setConsole(Console console) {
 		this.console = console;
-		cpu = console.getMotherboard().getCPU();
+		motherboard = console.getMotherboard();
 		pause = true;
 	}
 	
@@ -25,6 +34,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		if(t == null || !t.isAlive()) {
 			t = new Thread(this);
 			t.start();
+			lastFrameTime = System.currentTimeMillis();
 		}
 	}
 	
@@ -34,22 +44,48 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	public void run() {
 		while(!Thread.interrupted()) {
 			if(!pause) {
-				step();
-				if(pauseAfterStep) {
-					pause = true;
-					pauseAfterStep = false;
+				for(long i = 0; i < 357366; i++) {
+					if(cpuDivider == 12) {
+						cpuDivider = 0;
+						clockCPU();
+					}
+					cpuDivider++;
+					if(ppuDivider == 4) {
+						ppuDivider = 0;
+						clockPPU();
+					}
+					ppuDivider++;
 				}
+				console.displayFrame();
+				final long timeTaken = System.currentTimeMillis() - lastFrameTime;
+				final long sleepTime = FPS - timeTaken;
+				System.out.println("Sleep time: " + sleepTime);
+				if(sleepTime > 0) {
+					try {
+						Thread.sleep(sleepTime);
+					} catch(InterruptedException e) {}
+				}
+				lastFrameTime = System.currentTimeMillis();
+				
 			} 
 		}
+	}
+	
+	private void clockCPU() {
+		motherboard.cycleCPU();
+	}
+	
+	private void clockPPU() {
+		motherboard.cyclePPU();
 	}
 	
 	private void step() {
 		System.out.println("Step");
 		int cycleResult = -1;
 		do {
-			cycleResult = cpu.cycle();
+			cycleResult = motherboard.cycleCPU();
 		} while(cycleResult != 0);
-		notify("CPU_UPDATE", cpu.getStatusUpdate());
+		notify("CPU_UPDATE", motherboard.getCPU().getStatusUpdate());
 	}
 	
 	public synchronized void pause() {
