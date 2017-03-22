@@ -80,6 +80,17 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 			}
 			
 		});
+		
+		JMenuItem loadROM = new JMenuItem("Load ROM");
+		file.add(loadROM);
+		loadROM.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				loadNES();
+			}
+			
+		});
 	}
 	
 	protected void loadBin() {
@@ -91,8 +102,18 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 			int[] ram = new int[0x2000];
 			runner.takeNotice("LOAD", new int[][] {rom, ram});
 		}
-		
-		
+	}
+	
+	protected void loadNES() {
+		JFileChooser chooser = new JFileChooser();
+		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+			File f = chooser.getSelectedFile();
+			if(f.getName().toLowerCase().endsWith(".nes")) {
+				int[] rom = FileUtils.loadRomFromFile(f);
+				int[] ram = new int[0x2000];
+				runner.takeNotice("LOAD", new int[][] {rom, ram});
+			}
+		}
 	}
 	
 	public void updateDebugStatus(int[] statusUpdateArray) {

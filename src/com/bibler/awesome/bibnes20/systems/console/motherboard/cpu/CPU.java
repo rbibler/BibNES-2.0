@@ -31,7 +31,7 @@ public class CPU {
 	
 	private int instCount;
 	
-	private boolean debug = false;
+	private boolean debug = true;
 	
 	private int tN;
 	

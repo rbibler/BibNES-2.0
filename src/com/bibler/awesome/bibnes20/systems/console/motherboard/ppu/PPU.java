@@ -10,7 +10,7 @@ public class PPU {
 	}
 	
 	public void cycle() {
-		frame[cycleCount % frame.length] = ((cycleCount & 0xFF) << 8) | 0xFF;
+		frame[cycleCount % frame.length] = ((cycleCount & 0xFF) << 8) | 0xFF << 24 | 0xFF;
 		cycleCount++;
 	}
 
