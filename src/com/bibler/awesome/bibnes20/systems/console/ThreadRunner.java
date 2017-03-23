@@ -4,6 +4,7 @@ import com.bibler.awesome.bibnes20.communications.Notifiable;
 import com.bibler.awesome.bibnes20.communications.Notifier;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.Motherboard;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
+import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePakFactory;
 import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
 
@@ -100,10 +101,12 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 
 	@Override
 	public void takeNotice(String message, Object messagePacket) {
-		if(message.equalsIgnoreCase("LOAD")) {
-			int[][] romRam = (int[][]) messagePacket;
-			console.insertGamePak(GamePakFactory.createGamePakFromRoms(new ROM(romRam[0]), null));
-			console.setCPURam(romRam[1]);
+		if(message.equalsIgnoreCase("LOAD_ROM")) {
+			Object[] messagePacketArray = (Object[]) messagePacket;
+			GamePak pak = (GamePak) messagePacketArray[0];
+			int[] ram = (int[]) messagePacketArray[1];
+			console.insertGamePak(pak);
+			console.setCPURam(ram);
 		} else if(message.equalsIgnoreCase("STEP")) {
 			if(t == null || t.isAlive() == false) {
 				startEmulator();

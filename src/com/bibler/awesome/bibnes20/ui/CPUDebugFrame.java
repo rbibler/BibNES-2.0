@@ -19,6 +19,7 @@ import javax.swing.border.EmptyBorder;
 import com.bibler.awesome.bibnes20.communications.Notifiable;
 import com.bibler.awesome.bibnes20.communications.Notifier;
 import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
+import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.utilities.FileUtils;
 
 public class CPUDebugFrame extends JFrame implements Notifiable {
@@ -109,9 +110,9 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 			File f = chooser.getSelectedFile();
 			if(f.getName().toLowerCase().endsWith(".nes")) {
-				int[] rom = FileUtils.loadRomFromFile(f);
+				GamePak pak = FileUtils.loadRomFromFile(f);
 				int[] ram = new int[0x2000];
-				runner.takeNotice("LOAD", new int[][] {rom, ram});
+				runner.takeNotice("LOAD_ROM", new Object[] {pak, ram});
 			}
 		}
 	}
