@@ -92,11 +92,11 @@ public class CPU {
 				dataLatch = 0x00;
 				break;
 			case 2:
-				addressBus.latch(programCounter & 0xFF);
+				addressBus.latch((programCounter >> 8 )& 0xFF);
 				addressBus.assertAddressAndWrite(0x100 + (stackPointer--));
 				break;
 			case 3:
-				addressBus.latch((programCounter >> 8) & 0xFF);
+				addressBus.latch(programCounter & 0xFF);
 				addressBus.assertAddressAndWrite(0x100 + (stackPointer--));
 				break;
 			case 4:

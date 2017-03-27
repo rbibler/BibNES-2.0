@@ -1,6 +1,7 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
+import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 
 public class PPU {
 	
@@ -14,7 +15,19 @@ public class PPU {
 	private int currentDot;
 	private int currentScanline;
 	
+	private int PPU_CTRL;
+	private int PPU_MASK;
 	private int PPU_STATUS;
+	private int OAM_ADDR;
+	private int OAM_DATA;
+	private int PPU_SCROLL;
+	private int PPU_ADDR;
+	private int PPU_DATA;
+	private int OAM_DMA;
+	
+	private RAM vRam = new RAM(0x2000);
+	
+	private boolean registerToggle;
 	
 	public PPU() {
 		frame = new int[256 * 240];
@@ -24,14 +37,38 @@ public class PPU {
 		System.out.println("Reading PPU register " + registerToRead);
 		switch(registerToRead) {
 		case 0x02:
-			return PPU_STATUS;
+			PPU_ADDR = 0;
+			final int retValue = PPU_STATUS;
+			PPU_STATUS &= ~ 0x80;
+			return retValue;
 		}
 		return 0;
 	}
 	
 	public void write(int registerToRead, int dataToWrite) {
 		switch(registerToRead) {
-		
+		case 0:
+			PPU_CTRL = dataToWrite;
+			break;
+		case 1:
+			PPU_MASK = dataToWrite;
+			break;
+		case 3:
+			OAM_ADDR = dataToWrite;
+			break;
+		case 4:
+			OAM_DATA = dataToWrite;
+			break;
+		case 5:
+			PPU_SCROLL = dataToWrite;
+			break;
+		case 6:
+			PPU_ADDR = dataToWrite;
+			break;
+		case 7:
+			PPU_DATA = dataToWrite;
+			PPU_ADDR += ((PPU_CTRL & 0x02) > 0 ? 32 : 1);
+			break;
 		}
 	}
 	
