@@ -1,7 +1,10 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
+import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
+
 public class PPU {
 	
+	private CPU cpu;
 	private int[] frame;
 	int cycleCount;
 	
@@ -41,6 +44,7 @@ public class PPU {
 			} else if(currentScanline == 241){
 				if(currentDot == 1) {
 					PPU_STATUS |= 0x80; 											// Set Vblank flag
+					cpu.setNMI();
 				}
 			} else {
 				// vblank
@@ -64,6 +68,10 @@ public class PPU {
 	public int[] getFrame() {
 		cycleCount = 0;
 		return frame;
+	}
+
+	public void setCPU(CPU cpu) {
+		this.cpu = cpu;
 	}
 
 }

@@ -20,6 +20,7 @@ public class Motherboard {
 		cpuRam = new RAM(0x2000);
 		addressBus = new AddressBus(cpuRam, ppuRam, ppu);
 		cpu = new CPU(addressBus);
+		ppu.setCPU(cpu);
 	}
 	
 	public CPU getCPU() {

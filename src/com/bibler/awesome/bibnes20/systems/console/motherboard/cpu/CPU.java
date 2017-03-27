@@ -12,6 +12,8 @@ public class CPU {
 	private final int Z = 0x02;
 	private final int C = 0x01;
 	
+	private final int NMI = 0x100;
+	
 	private AddressBus addressBus;
 	
 	private int statusRegister;
@@ -26,6 +28,8 @@ public class CPU {
 	private int effectiveAddressLow;
 	private int effectiveAddressHigh;
 	private int dataLatch;
+	
+	private boolean NMIFlipFlop;
 	
 	private int instCount;
 	
@@ -50,7 +54,12 @@ public class CPU {
 	
 	public int cycle() {
 		if(tN == 0) {
-			fetchInstruction();
+			if(NMIFlipFlop) {
+				NMIFlipFlop = false;
+				this.instructionLatch = NMI;
+			} else {
+				fetchInstruction();
+			}
 			instCount++;
 			if(debug) {
 				System.out.println("" + instCount + ". " + opCodes[instructionLatch]);
@@ -76,6 +85,36 @@ public class CPU {
 		int carry;
 		int result = 0;
 		switch(instructionLatch) {
+		case NMI: 
+			switch(tN) {
+			case 1:
+				addressBus.assertAddress(programCounter);
+				dataLatch = 0x00;
+				break;
+			case 2:
+				addressBus.latch(programCounter & 0xFF);
+				addressBus.assertAddressAndWrite(0x100 + (stackPointer--));
+				break;
+			case 3:
+				addressBus.latch((programCounter >> 8) & 0xFF);
+				addressBus.assertAddressAndWrite(0x100 + (stackPointer--));
+				break;
+			case 4:
+				addressBus.latch(statusRegister);
+				addressBus.assertAddressAndWrite(0x100 + (stackPointer--));
+				break;
+			case 5:
+				addressBus.assertAddress(0xFFFA);
+				effectiveAddressLow = addressBus.readLatchedData();
+				break;
+			case 6:
+				addressBus.assertAddress(0xFFFB);
+				effectiveAddressHigh = addressBus.readLatchedData();
+				programCounter = effectiveAddressLow | (effectiveAddressHigh << 8);
+				tN = -1;
+				break;
+			}
+			break;
 		case 0x00: 										// Brk
 			switch(tN) {
 			case 1:
@@ -4652,8 +4691,13 @@ public class CPU {
 			"CPY", "CMP", "   ", "	 ", "CPY", "CMP", "DEC", "	 ", "INY", "CMP", "DEX", "	 ", "CPY", "CMP", "DEC", "	 ", 
 			"BNE", "CMP", "   ", "	 ", "	", "CMP", "DEC", "	 ", "CLD", "CMP", "   ", "	 ", "	", "CMP", "DEC", "	 ", 
 			"CPX", "SBC", "   ", "   ", "CPX", "SBC", "INC", "	 ", "INX", "SBC", "NOP", "   ", "CPX", "SBC", "INC", "	 ", 
-			"BEQ", "SBC", "   ", "	 ", "	", "SBC", "INC", "	 ", "SED", "SBC", "   ", "	 ", "	", "SBC", "INC", "	 "	
+			"BEQ", "SBC", "   ", "	 ", "	", "SBC", "INC", "	 ", "SED", "SBC", "   ", "	 ", "	", "SBC", "INC", "	 ",
+			"NMI"
 	};
+
+	public void setNMI() {
+		NMIFlipFlop = true;
+	}
 	
 	
 	
