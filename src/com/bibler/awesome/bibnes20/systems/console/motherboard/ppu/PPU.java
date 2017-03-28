@@ -1,5 +1,6 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
+import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.AddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
@@ -116,14 +117,50 @@ public class PPU {
 			}
 		}
 	}
+	
+	private void renderFrame() {
+		int ntByte;
+		int ptByteLow;
+		int ptByteHigh;
+		for(int i = 0; i < 0x3C0; i++) {
+			addressBus.assertAddress(0x2000 + i);
+			ntByte = addressBus.readLatchedData();
+			for(int j = 0; j < 8; j++) {
+				addressBus.assertAddress(0x1000 + (ntByte * 16) + j);
+				ptByteLow = addressBus.readLatchedData();
+				addressBus.assertAddress(0x1000 + ((ntByte * 16) + j) + 8);
+				ptByteHigh = addressBus.readLatchedData();
+				renderPatternSlice(ptByteLow, ptByteHigh, i, j);
+			}
+		}
+	}
+	
+	private void renderPatternSlice(int ptByteLow, int ptByteHigh, int ntIndex, int row) {
+		int startX = (ntIndex % 32) * 8;
+		int y = ((ntIndex / 32) * 8) + row;
+		int x; 
+		int color;
+		for(int i = 0; i < 8; i++) {
+			x = startX + i;
+			color = (ptByteLow >> (7 - i)) | (ptByteHigh >> (7 - i)) << 1;
+			addressBus.assertAddress(0x3F00 + color);
+			color = addressBus.readLatchedData();
+			frame[(y * 256) + x] = NESPalette.getColor(color);
+		}
+	}
 
 	public int[] getFrame() {
+		renderFrame();
 		cycleCount = 0;
 		return frame;
 	}
 
 	public void setCPU(CPU cpu) {
 		this.cpu = cpu;
+	}
+
+	public PPUAddressBus getAddressBus() {
+		return addressBus;
 	}
 
 }

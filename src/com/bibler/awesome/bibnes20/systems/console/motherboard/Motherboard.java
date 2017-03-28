@@ -37,6 +37,7 @@ public class Motherboard {
 
 	public void acceptGamePak(GamePak gamePak) {
 		addressBus.setGamePak(gamePak);
+		ppu.getAddressBus().setGamePak(gamePak);
 	}
 
 	public void setCPURam(RAM cpuRam) {
