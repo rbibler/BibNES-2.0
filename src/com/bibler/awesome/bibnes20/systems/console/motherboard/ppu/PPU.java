@@ -44,6 +44,7 @@ public class PPU {
 		switch(registerToRead) {
 		case 0x02:
 			PPU_ADDR = 0;
+			registerToggle = false;
 			final int retValue = PPU_STATUS;
 			PPU_STATUS &= ~ 0x80;
 			return retValue;
@@ -69,7 +70,13 @@ public class PPU {
 			PPU_SCROLL = dataToWrite;
 			break;
 		case 6:
-			PPU_ADDR = dataToWrite;
+			if(registerToggle == false) {
+				PPU_ADDR = (dataToWrite << 8);
+				registerToggle = true;
+			} else {
+				PPU_ADDR |= (dataToWrite & 0xFF);
+				registerToggle = false;
+			}
 			break;
 		case 7:
 			PPU_DATA = dataToWrite;
