@@ -7,7 +7,6 @@ import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 public class AddressBus {
 	
 	private RAM cpuRam;
-	private RAM ppuRam;
 	private GamePak gamePak;
 	private PPU ppu;
 	private int gamePakAddressStart = 0x8000;			// NORMALLY 0x8000
@@ -21,9 +20,8 @@ public class AddressBus {
 	private int latchedData;
 	private int selector;
 	
-	public AddressBus(RAM cpuRam, RAM ppuRam, PPU ppu) {
+	public AddressBus(RAM cpuRam, PPU ppu) {
 		this.cpuRam = cpuRam;
-		this.ppuRam = ppuRam;
 		this.ppu = ppu;
 	}
 

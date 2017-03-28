@@ -31,4 +31,12 @@ public class GamePak {
 		
 	}
 
+	public int readChrRom(int address) {
+		return(chrRom.read(address));
+	}
+	
+	public void writeChrRom(int address, int data) {
+		return;
+	}
+
 }

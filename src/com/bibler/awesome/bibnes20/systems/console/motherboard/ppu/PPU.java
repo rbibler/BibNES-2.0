@@ -1,10 +1,12 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
+import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 
 public class PPU {
 	
+	private PPUAddressBus addressBus;
 	private CPU cpu;
 	private int[] frame;
 	int cycleCount;
@@ -33,6 +35,10 @@ public class PPU {
 		frame = new int[256 * 240];
 	}
 	
+	public void setAddressBus(PPUAddressBus addressBus) {
+		this.addressBus = addressBus;
+	}
+	
 	public int read(int registerToRead) {
 		System.out.println("Reading PPU register " + registerToRead);
 		switch(registerToRead) {
@@ -45,8 +51,8 @@ public class PPU {
 		return 0;
 	}
 	
-	public void write(int registerToRead, int dataToWrite) {
-		switch(registerToRead) {
+	public void write(int registerToWrite, int dataToWrite) {
+		switch(registerToWrite) {
 		case 0:
 			PPU_CTRL = dataToWrite;
 			break;
@@ -67,6 +73,8 @@ public class PPU {
 			break;
 		case 7:
 			PPU_DATA = dataToWrite;
+			addressBus.latch(dataToWrite);
+			addressBus.assertAddressAndWrite(PPU_ADDR);
 			PPU_ADDR += ((PPU_CTRL & 0x02) > 0 ? 32 : 1);
 			break;
 		}
