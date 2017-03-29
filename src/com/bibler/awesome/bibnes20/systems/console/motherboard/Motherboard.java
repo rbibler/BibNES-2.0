@@ -1,5 +1,6 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard;
 
+import com.bibler.awesome.bibnes20.controllers.KeyboardController;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.AddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
@@ -22,7 +23,8 @@ public class Motherboard {
 		PPUAddressBus ppuAddressBus = new PPUAddressBus(ppuRam, ppu);
 		ppu.setAddressBus(ppuAddressBus);
 		cpuRam = new RAM(0x2000);
-		addressBus = new AddressBus(cpuRam, ppu);
+		KeyboardController controller = new KeyboardController();
+		addressBus = new AddressBus(cpuRam, ppu, controller);
 		cpu = new CPU(addressBus);
 		ppu.setCPU(cpu);
 	}

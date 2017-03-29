@@ -33,7 +33,7 @@ public class CPU {
 	
 	private int instCount;
 	
-	private boolean debug = true;
+	private boolean debug = false;
 	
 	private int tN;
 	
@@ -1440,6 +1440,7 @@ public class CPU {
 				addressBus.assertAddress(programCounter++);
 				effectiveAddressHigh = addressBus.readLatchedData();
 				programCounter = effectiveAddressLow | (effectiveAddressHigh << 8);
+				System.out.println("Jump to: " + Integer.toHexString(programCounter).toUpperCase());
 				tN = -1;
 				break;
 				
@@ -2038,6 +2039,7 @@ public class CPU {
 				addressBus.assertAddress((addressLatchLow | (addressLatchHigh << 8)) + 1);
 				effectiveAddressHigh = addressBus.readLatchedData();
 				programCounter = effectiveAddressLow | (effectiveAddressHigh << 8);
+				System.out.println("Jump indirect to: " + Integer.toHexString(programCounter).toUpperCase());
 				tN = -1;
 				break;
 			}

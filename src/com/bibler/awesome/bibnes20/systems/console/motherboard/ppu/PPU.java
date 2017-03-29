@@ -1,5 +1,7 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
+import java.awt.image.BufferedImage;
+
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.AddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
@@ -41,7 +43,7 @@ public class PPU {
 	}
 	
 	public int read(int registerToRead) {
-		System.out.println("Reading PPU register " + registerToRead);
+		//System.out.println("Reading PPU register " + registerToRead);
 		switch(registerToRead) {
 		case 0x02:
 			PPU_ADDR = 0;
@@ -97,7 +99,9 @@ public class PPU {
 			} else if(currentScanline == 241){
 				if(currentDot == 1) {
 					PPU_STATUS |= 0x80; 											// Set Vblank flag
-					cpu.setNMI();
+					if((PPU_CTRL & 0x80) > 0) {
+						cpu.setNMI();
+					}
 				}
 			} else {
 				// vblank
@@ -120,22 +124,43 @@ public class PPU {
 	
 	private void renderFrame() {
 		int ntByte;
+		int atByte;
 		int ptByteLow;
 		int ptByteHigh;
+		int atXCount = 0;
+		int atYCount = 0;
+		int currentATCol = 0;
+		int currentATRow = 0;
 		for(int i = 0; i < 0x3C0; i++) {
 			addressBus.assertAddress(0x2000 + i);
 			ntByte = addressBus.readLatchedData();
+			addressBus.assertAddress(0x23C0 + (currentATCol) + (currentATRow * 8));
+			atByte = addressBus.readLatchedData();
+			atXCount++;
+			if(atXCount == 4) {
+				currentATCol++;
+				if(currentATCol == 8) {
+					currentATCol = 0;
+					atXCount = 0;
+					atYCount++;
+					if(atYCount == 4) {
+						atYCount = 0;
+						currentATRow++;
+					}
+				}
+			}
 			for(int j = 0; j < 8; j++) {
+				
 				addressBus.assertAddress(0x1000 + (ntByte * 16) + j);
 				ptByteLow = addressBus.readLatchedData();
 				addressBus.assertAddress(0x1000 + ((ntByte * 16) + j) + 8);
 				ptByteHigh = addressBus.readLatchedData();
-				renderPatternSlice(ptByteLow, ptByteHigh, i, j);
+				renderPatternSlice(ptByteLow, ptByteHigh, atByte, i, j);
 			}
 		}
 	}
 	
-	private void renderPatternSlice(int ptByteLow, int ptByteHigh, int ntIndex, int row) {
+	private void renderPatternSlice(int ptByteLow, int ptByteHigh, int atByte, int ntIndex, int row) {
 		int startX = (ntIndex % 32) * 8;
 		int y = ((ntIndex / 32) * 8) + row;
 		int x; 
@@ -148,9 +173,64 @@ public class PPU {
 			frame[(y * 256) + x] = NESPalette.getColor(color);
 		}
 	}
+	
+	private void updateScreen(int ntAddress) {
+		int pixel;
+		int row;
+		int col;
+		int address;
+		int lowBg = 0;
+		int highBg = 0;
+		int ntByte;
+		int fineY;
+		int x;
+		int y;
+		int attrX;
+		int attrY;
+		int curAttr;
+		final int length = frame.length;
+		for(int i = 0; i < length; i++) {
+			x = i % 256;
+			y = (i / 256);
+			row = y / 8;
+			col = x / 8;
+			address = ntAddress + (row * 32) + col;
+			addressBus.assertAddress(address);
+			ntByte = addressBus.readLatchedData();
+			address = ntAddress + 0x3C0 + (((y / 32) * 8) + (x / 32));
+			addressBus.assertAddress(address);
+			curAttr = addressBus.readLatchedData() & 0xFF;
+			row = (ntByte / 16);
+			col = ntByte % 16;
+			fineY = (y % 8);
+			address = (1  << 0xC) | (row << 8) | (col << 4) | fineY & 7; 
+			if(address >= 0) {
+				addressBus.assertAddress(address);
+				lowBg = addressBus.readLatchedData();
+			}
+			address = (1 << 0xC) | (row << 8) | (col << 4) | (1 << 3) | fineY & 7;
+			if(address >= 0) {
+				addressBus.assertAddress(address);
+				highBg = addressBus.readLatchedData();
+			}
+			int attrStart = (((y / 32) * 32) * 256) + (((x / 32) * 32));
+			attrX = (x / 32) * 4;
+			attrY = (y / 32) * 4;
+			int ntX = x / 8;
+			int ntY = y / 8;
+			attrStart = i - attrStart;
+			int attrBitShift = (((ntX - attrX) / 2) * 2) + (((ntY - attrY) / 2) * 4);
+			int palVal = ((curAttr >> attrBitShift) & 3) << 2;
+			pixel = ((highBg >> (7 - (i % 8)) & 1) << 1 | (lowBg >> (7 -(i % 8)) & 1));
+			address = 0x3F00 + (palVal + pixel);
+			addressBus.assertAddress(address);
+			frame[i] = NESPalette.getColor(addressBus.readLatchedData());
+		}
+	}
 
 	public int[] getFrame() {
-		renderFrame();
+		//renderFrame();
+		updateScreen(0x2000);
 		cycleCount = 0;
 		return frame;
 	}
