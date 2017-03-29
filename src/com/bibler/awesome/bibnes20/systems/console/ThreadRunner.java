@@ -60,14 +60,13 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 				console.displayFrame();
 				final long timeTaken = System.currentTimeMillis() - lastFrameTime;
 				final long sleepTime = FPS - timeTaken;
-				System.out.println("Sleep time: " + sleepTime);
+				//System.out.println("Sleep time: " + sleepTime);
 				if(sleepTime > 0) {
 					try {
 						Thread.sleep(sleepTime);
 					} catch(InterruptedException e) {}
 				}
 				lastFrameTime = System.currentTimeMillis();
-				
 			} 
 		}
 	}

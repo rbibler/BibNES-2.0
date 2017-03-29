@@ -29,6 +29,8 @@ public class PPU {
 	private int PPU_ADDR;
 	private int PPU_DATA;
 	private int OAM_DMA;
+	private int xScroll;
+	private int yScroll;
 	
 	private RAM vRam = new RAM(0x2000);
 	
@@ -70,6 +72,14 @@ public class PPU {
 			OAM_DATA = dataToWrite;
 			break;
 		case 5:
+			if(registerToggle == false) {
+				xScroll = dataToWrite;
+				registerToggle = true;
+			} else {
+				yScroll = dataToWrite;
+				registerToggle = false;
+			}
+			System.out.println("XScroll: " + xScroll + " yScroll: " + yScroll);
 			PPU_SCROLL = dataToWrite;
 			break;
 		case 6:
@@ -174,7 +184,7 @@ public class PPU {
 		}
 	}
 	
-	private void updateScreen(int ntAddress) {
+	private void updateScreen() {
 		int pixel;
 		int row;
 		int col;
@@ -194,21 +204,21 @@ public class PPU {
 			y = (i / 256);
 			row = y / 8;
 			col = x / 8;
-			address = ntAddress + (row * 32) + col;
+			address = (0x2000 | ((PPU_CTRL & 0b11) << 10)) + (row * 32) + col;
 			addressBus.assertAddress(address);
 			ntByte = addressBus.readLatchedData();
-			address = ntAddress + 0x3C0 + (((y / 32) * 8) + (x / 32));
+			address = (0x2000 | ((PPU_CTRL & 0b11) << 10)) + 0x3C0 + (((y / 32) * 8) + (x / 32));
 			addressBus.assertAddress(address);
 			curAttr = addressBus.readLatchedData() & 0xFF;
 			row = (ntByte / 16);
 			col = ntByte % 16;
 			fineY = (y % 8);
-			address = (1  << 0xC) | (row << 8) | (col << 4) | fineY & 7; 
+			address = ((PPU_CTRL >> 4 & 1) << 0xC) | (row << 8) | (col << 4) | fineY & 7; 
 			if(address >= 0) {
 				addressBus.assertAddress(address);
 				lowBg = addressBus.readLatchedData();
 			}
-			address = (1 << 0xC) | (row << 8) | (col << 4) | (1 << 3) | fineY & 7;
+			address = ((PPU_CTRL >> 4 & 1) << 0xC) | (row << 8) | (col << 4) | (1 << 3) | fineY & 7;
 			if(address >= 0) {
 				addressBus.assertAddress(address);
 				highBg = addressBus.readLatchedData();
@@ -230,7 +240,7 @@ public class PPU {
 
 	public int[] getFrame() {
 		//renderFrame();
-		updateScreen(0x2000);
+		updateScreen();
 		cycleCount = 0;
 		return frame;
 	}
