@@ -1,4 +1,4 @@
-package com.bibler.awesome.bibnes20.ui;
+package com.bibler.awesome.bibnes20.ui.cpuemulator;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -56,8 +56,6 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 		debugPanel = new CPUDebugPanel(inputPanel);
 		splitPane.add(debugPanel, BorderLayout.LINE_END);
 		
-		initializeMenu();
-		
 		pack();
 		setVisible(true);
 	}
@@ -65,57 +63,7 @@ public class CPUDebugFrame extends JFrame implements Notifiable {
 	public void setRunner(ThreadRunner runner) {
 		this.runner = runner;
 	}
-	
-	private void initializeMenu() {
-		JMenuBar menuBar = new JMenuBar();
-		JMenu file = new JMenu("File");
-		menuBar.add(file);
-		setJMenuBar(menuBar);
-		JMenuItem loadBin = new JMenuItem("Load Bin");
-		file.add(loadBin);
-		loadBin.addActionListener(new ActionListener() {
 
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				loadBin();
-			}
-			
-		});
-		
-		JMenuItem loadROM = new JMenuItem("Load ROM");
-		file.add(loadROM);
-		loadROM.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				loadNES();
-			}
-			
-		});
-	}
-	
-	protected void loadBin() {
-		JFileChooser chooser = new JFileChooser();
-		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-			File f = chooser.getSelectedFile();
-			int[] rom = FileUtils.loadBinFromFile(f);
-			rom[0x7FFD] = 0x80;
-			int[] ram = new int[0x2000];
-			runner.takeNotice("LOAD", new int[][] {rom, ram});
-		}
-	}
-	
-	protected void loadNES() {
-		JFileChooser chooser = new JFileChooser();
-		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-			File f = chooser.getSelectedFile();
-			if(f.getName().toLowerCase().endsWith(".nes")) {
-				GamePak pak = FileUtils.loadRomFromFile(f);
-				int[] ram = new int[0x2000];
-				runner.takeNotice("LOAD_ROM", new Object[] {pak, ram});
-			}
-		}
-	}
 	
 	public void updateDebugStatus(int[] statusUpdateArray) {
 		debugPanel.updateDebugStatus(statusUpdateArray);

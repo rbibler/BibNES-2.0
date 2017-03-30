@@ -1,4 +1,4 @@
-package com.bibler.awesome.bibnes20.ui;
+package com.bibler.awesome.bibnes20.ui.cpuemulator;
 
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
