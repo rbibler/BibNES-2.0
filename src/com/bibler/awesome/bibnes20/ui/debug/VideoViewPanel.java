@@ -13,6 +13,11 @@ public class VideoViewPanel extends JPanel {
 	public VideoViewPanel(JPanel[] views) {
 		super();
 		this.views = views;
+		for(JPanel panel : views) {
+			if(panel != null) {
+				add(panel);
+			}
+		}
 	}
 
 }

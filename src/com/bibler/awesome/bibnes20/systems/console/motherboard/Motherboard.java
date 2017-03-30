@@ -62,4 +62,8 @@ public class Motherboard {
 		return ppu.getFrame();
 	}
 
+	public PPU getPPU() {
+		return ppu;
+	}
+
 }

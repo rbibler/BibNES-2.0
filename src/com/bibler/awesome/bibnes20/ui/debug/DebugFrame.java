@@ -6,6 +6,9 @@ import javax.swing.JFrame;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 
+import com.bibler.awesome.bibnes20.systems.console.Console;
+import com.bibler.awesome.bibnes20.systems.console.motherboard.ppu.PPU;
+
 public class DebugFrame extends JFrame {
 
 	/**
@@ -29,6 +32,7 @@ public class DebugFrame extends JFrame {
 	private NametableView[] nameTables;
 	private PatterntableView[] patternTables;
 	
+	private Console console;
 	
 	public DebugFrame() {
 		super();
@@ -57,7 +61,10 @@ public class DebugFrame extends JFrame {
 	
 	private void initializeVideoViews() {
 		videoViewPane = new JTabbedPane();
-		nameTables = new NametableView[4];
+		nameTables = new NametableView[] {
+				new NametableView(0), new NametableView(1), 
+				new NametableView(2), new NametableView(3)
+		};
 		patternTables = new PatterntableView[2];
 		nametablePanel = new VideoViewPanel(nameTables);
 		patterntablePanel = new VideoViewPanel(patternTables);
@@ -87,5 +94,15 @@ public class DebugFrame extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		add(bodyPane, BorderLayout.CENTER);
 		pack();
+	}
+
+	public void setConsole(Console console) {
+		this.console = console;
+	}
+	
+	public void updateFrame() {
+		for(NametableView ntView : nameTables) {
+			ntView.updateFrame(console.getMotherboard().getPPU());
+		}
 	}
 }

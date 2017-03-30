@@ -7,11 +7,13 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePakFactory;
 import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
+import com.bibler.awesome.bibnes20.ui.debug.DebugFrame;
 
 public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	
 	private Console console;
 	private Motherboard motherboard;
+	private DebugFrame debugFrame;
 	
 	
 	// Control variables
@@ -58,6 +60,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 					ppuDivider++;
 				}
 				console.displayFrame();
+				debugFrame.updateFrame();
 				final long timeTaken = System.currentTimeMillis() - lastFrameTime;
 				final long sleepTime = FPS - timeTaken;
 				//System.out.println("Sleep time: " + sleepTime);
@@ -94,6 +97,10 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	
 	public synchronized void resume() {
 		pause = false;
+	}
+	
+	public void setDebugFrame(DebugFrame debugFrame) {
+		this.debugFrame = debugFrame;
 	}
 	
 	private boolean debug = false;

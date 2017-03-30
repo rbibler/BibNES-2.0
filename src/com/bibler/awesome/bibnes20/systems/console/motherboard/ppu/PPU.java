@@ -252,5 +252,16 @@ public class PPU {
 	public PPUAddressBus getAddressBus() {
 		return addressBus;
 	}
+	
+	public int getByte(int address) {
+		addressBus.assertAddress(address);
+		return addressBus.readLatchedData();
+	}
+	
+	public int getPPUCTRL() {
+		return PPU_CTRL;
+	}
+	
+	
 
 }

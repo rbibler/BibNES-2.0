@@ -1,4 +1,4 @@
-package com.bibler.awesome.bibnes20.ui.nes;
+package com.bibler.awesome.bibnes20.systems.console.output;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,7 +13,7 @@ import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.utilities.FileUtils;
 
-public class NESFrameMenuManager extends JMenuBar {
+public class TVOutMenuManager extends JMenuBar {
 	
 	
 	/**
@@ -22,7 +22,7 @@ public class NESFrameMenuManager extends JMenuBar {
 	private static final long serialVersionUID = -8846824869706790507L;
 	private ThreadRunner runner;
 	
-	public NESFrameMenuManager() {
+	public TVOutMenuManager() {
 		super();
 		initializeMenu();
 	}
@@ -33,7 +33,9 @@ public class NESFrameMenuManager extends JMenuBar {
 
 	private void initializeMenu() {
 		JMenu file = new JMenu("File");
+		JMenu console = new JMenu("Console");
 		add(file);
+		add(console);
 		JMenuItem loadBin = new JMenuItem("Load Bin");
 		file.add(loadBin);
 		loadBin.addActionListener(new ActionListener() {
@@ -52,6 +54,17 @@ public class NESFrameMenuManager extends JMenuBar {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				loadNES();
+			}
+			
+		});
+		
+		JMenuItem powerOn = new JMenuItem("Power");
+		console.add(powerOn);
+		powerOn.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				runner.takeNotice("RUN", null);
 			}
 			
 		});

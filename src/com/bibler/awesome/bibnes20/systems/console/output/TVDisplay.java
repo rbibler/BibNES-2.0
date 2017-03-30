@@ -37,7 +37,8 @@ public class TVDisplay extends JPanel {
 	}
 	
 	private void paintDisplay(Graphics g) {
-		g.drawImage(displayImage, 0, 0, null);
+		g.drawImage(displayImage, 0, 0, getWidth(), getHeight(), null);
+		//g.drawImage(displayImage, 0, 0, null);
 	}
 
 }

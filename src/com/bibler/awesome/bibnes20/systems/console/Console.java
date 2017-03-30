@@ -11,9 +11,9 @@ public class Console {
 	private GamePak currentGamePak;
 	private TVOut tvOut;
 	
-	public Console() {
+	public Console(TVOut tvOut) {
 		motherboard = new Motherboard();
-		tvOut = new TVOut();
+		this.tvOut = tvOut;
 	}
 
 	public Motherboard getMotherboard() {
