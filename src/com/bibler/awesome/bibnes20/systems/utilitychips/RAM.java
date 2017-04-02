@@ -24,4 +24,8 @@ public class RAM {
 		
 	}
 
+	public int[] getMemArray() {
+		return memoryArray;
+	}
+
 }

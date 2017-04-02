@@ -21,4 +21,8 @@ public class ROM {
 		// TODO Auto-generated method stub
 		
 	}
+
+	public int[] getMemArray() {
+		return memoryArray;
+	}
 }

@@ -1,8 +1,5 @@
 package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 
-import java.awt.image.BufferedImage;
-
-import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.AddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
@@ -10,6 +7,7 @@ import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 public class PPU {
 	
 	private PPUAddressBus addressBus;
+	private RAM paletteRam = new RAM(0x20);
 	private CPU cpu;
 	private int[] frame;
 	int cycleCount;
@@ -25,19 +23,41 @@ public class PPU {
 	private int PPU_STATUS;
 	private int OAM_ADDR;
 	private int OAM_DATA;
-	private int PPU_SCROLL;
-	private int PPU_ADDR;
 	private int PPU_DATA;
 	private int OAM_DMA;
 	private int xScroll;
 	private int yScroll;
 	
-	private RAM vRam = new RAM(0x2000);
+	private int t;
+	private int v;
+	private int w;
 	
-	private boolean registerToggle;
+	private int ntByte;
+	private int atByte;
+	private int ptByteLow;
+	private int ptByteHigh;
+	
+	private int bgShiftLow;
+	private int bgShiftHigh;
+	private int bgAtShiftLow;
+	private int bgAtShiftHigh;
+	private int bgAtLatchLow;
+	private int bgAtLatchHigh;
+	
+	private int oddEvenLine;
 	
 	public PPU() {
 		frame = new int[256 * 240];
+	}
+	
+	public void reset() {
+		t = 0;
+		v = 0;
+		w = 0;
+		xScroll = 0;
+		currentScanline = 261;
+		currentDot = 0;
+		oddEvenLine = 0;
 	}
 	
 	public void setAddressBus(PPUAddressBus addressBus) {
@@ -45,13 +65,10 @@ public class PPU {
 	}
 	
 	public int read(int registerToRead) {
-		//System.out.println("Reading PPU register " + registerToRead);
 		switch(registerToRead) {
 		case 0x02:
-			PPU_ADDR = 0;
-			registerToggle = false;
+			w = 0;
 			final int retValue = PPU_STATUS;
-			PPU_STATUS &= ~ 0x80;
 			return retValue;
 		}
 		return 0;
@@ -61,6 +78,8 @@ public class PPU {
 		switch(registerToWrite) {
 		case 0:
 			PPU_CTRL = dataToWrite;
+			t &= ~0xC;
+			t = (dataToWrite & 3) << 2;
 			break;
 		case 1:
 			PPU_MASK = dataToWrite;
@@ -72,54 +91,52 @@ public class PPU {
 			OAM_DATA = dataToWrite;
 			break;
 		case 5:
-			if(registerToggle == false) {
-				xScroll = dataToWrite;
-				registerToggle = true;
+			if(w == 0) {
+				t &= ~0x1F;
+				t |= (dataToWrite >> 3) & 0x1F;
+				xScroll = dataToWrite & 7;
+				w = 1;
 			} else {
-				yScroll = dataToWrite;
-				registerToggle = false;
+				t &= ~0x73E0;
+				t |= (dataToWrite & 3) << 12;
+				t |= ((dataToWrite >> 3) & 0x1F) << 5;
+				w = 0;
 			}
-			System.out.println("XScroll: " + xScroll + " yScroll: " + yScroll);
-			PPU_SCROLL = dataToWrite;
 			break;
 		case 6:
-			if(registerToggle == false) {
-				PPU_ADDR = (dataToWrite << 8);
-				registerToggle = true;
+			if(w == 0) {
+				t &= ~0x7F00;
+				t |= (dataToWrite & 0x3F) << 8;
+				w  =1;
 			} else {
-				PPU_ADDR |= (dataToWrite & 0xFF);
-				registerToggle = false;
+				t &= ~0xFF;
+				t |= (dataToWrite & 0xFF);
+				w = 0;
+				v = t;
 			}
 			break;
 		case 7:
 			PPU_DATA = dataToWrite;
-			addressBus.latch(dataToWrite);
-			addressBus.assertAddressAndWrite(PPU_ADDR);
-			PPU_ADDR += ((PPU_CTRL & 0x02) > 0 ? 32 : 1);
+			if(v >= 0x3F00) {
+				paletteRam.write(v - 0x3F00, dataToWrite);
+			} else {
+				addressBus.latch(dataToWrite);
+				addressBus.assertAddressAndWrite(v);
+			}
+			v += ((PPU_CTRL & 0x02) > 0 ? 32 : 1);
 			break;
 		}
 	}
 	
+	private boolean renderOn() {
+		return (PPU_MASK & 0x8) > 0 || (PPU_MASK & 0x10) > 0;
+	}
+	
 	public void cycle() {
-		if(currentScanline < 261) {
-			if(currentScanline < 240) {
-				// visible scanlines
-			} else if(currentScanline == 240) {
-				// post render
-			} else if(currentScanline == 241){
-				if(currentDot == 1) {
-					PPU_STATUS |= 0x80; 											// Set Vblank flag
-					if((PPU_CTRL & 0x80) > 0) {
-						cpu.setNMI();
-					}
-				}
-			} else {
-				// vblank
-			}
-		} else if(currentScanline == 261) {
-			if(currentDot == 1) {
-				PPU_STATUS &= ~0x80;												// Clear vBlank flag
-			}
+		if(renderOn()) {
+			cycleRenderOn();
+		} else {
+			cycleRenderOff();
 		}
 		currentDot++;
 		if(currentDot == dotsPerLine) {
@@ -130,60 +147,166 @@ public class PPU {
 				currentScanline = 0;
 			}
 		}
+		//System.out.println("Scanline: " + currentScanline + " Pixel: " + currentDot);
 	}
 	
-	private void renderFrame() {
-		int ntByte;
-		int atByte;
-		int ptByteLow;
-		int ptByteHigh;
-		int atXCount = 0;
-		int atYCount = 0;
-		int currentATCol = 0;
-		int currentATRow = 0;
-		for(int i = 0; i < 0x3C0; i++) {
-			addressBus.assertAddress(0x2000 + i);
-			ntByte = addressBus.readLatchedData();
-			addressBus.assertAddress(0x23C0 + (currentATCol) + (currentATRow * 8));
-			atByte = addressBus.readLatchedData();
-			atXCount++;
-			if(atXCount == 4) {
-				currentATCol++;
-				if(currentATCol == 8) {
-					currentATCol = 0;
-					atXCount = 0;
-					atYCount++;
-					if(atYCount == 4) {
-						atYCount = 0;
-						currentATRow++;
+	private void cycleRenderOn() {
+		if(currentScanline < 261) {
+			if(currentScanline < 240) {
+				if(currentDot < 257) {
+					evaluateBG();
+					if(currentDot == 256) {
+						incrementVertical();
+					}
+				} else if(currentDot == 257) {
+					v &= ~0x41F;
+					v |= t & 0x41F;
+				} else if(currentDot >= 321 && currentDot <= 337) {
+					evaluateBG();
+				} else if(currentDot >= 337 && currentDot <= 340) {
+					dummyNTFetch();
+				}
+			} else if(currentScanline == 241){
+				if(currentDot == 1) {
+					PPU_STATUS |= 0x80; 											// Set Vblank flag
+					if((PPU_CTRL & 0x80) > 0) {
+						cpu.setNMI();
 					}
 				}
+			} 
+		} else if(currentScanline == 261) {
+			if(currentDot == 1) {
+				PPU_STATUS &= ~0x80;												// Clear vBlank flag
+			} else if(currentDot < 257) {
+				evaluateBG();
+				if(currentDot == 256) {
+					incrementVertical();
+				}
+			} else if(currentDot == 257) {
+				v &= ~0x41F;
+				v |= t & 0x41F;
+			} else if(currentDot >= 280 && currentDot <= 304) {
+				equalizeVerticalScroll();
+			} else if(currentDot >= 321 && currentDot <= 337) {
+				evaluateBG();
+			} else if(currentDot >= 337 && currentDot <= 340) {
+				dummyNTFetch();
 			}
-			for(int j = 0; j < 8; j++) {
-				
-				addressBus.assertAddress(0x1000 + (ntByte * 16) + j);
-				ptByteLow = addressBus.readLatchedData();
-				addressBus.assertAddress(0x1000 + ((ntByte * 16) + j) + 8);
-				ptByteHigh = addressBus.readLatchedData();
-				renderPatternSlice(ptByteLow, ptByteHigh, atByte, i, j);
+		}
+		if(currentScanline < 240 && currentDot >= 1 && currentDot <= 256) {
+			renderDot();
+		}
+	}
+	
+	private void cycleRenderOff() {
+		if(currentScanline == 261 && currentDot == 1) {
+			PPU_STATUS &= ~0x80;
+		} else if(currentScanline == 241 && currentDot == 1) {
+			PPU_STATUS |= 0x80;
+			if((PPU_CTRL & 0x80) > 0) {
+				cpu.setNMI();
 			}
 		}
 	}
 	
-	private void renderPatternSlice(int ptByteLow, int ptByteHigh, int atByte, int ntIndex, int row) {
-		int startX = (ntIndex % 32) * 8;
-		int y = ((ntIndex / 32) * 8) + row;
-		int x; 
-		int color;
-		for(int i = 0; i < 8; i++) {
-			x = startX + i;
-			color = (ptByteLow >> (7 - i)) | (ptByteHigh >> (7 - i)) << 1;
-			addressBus.assertAddress(0x3F00 + color);
-			color = addressBus.readLatchedData();
-			frame[(y * 256) + x] = NESPalette.getColor(color);
+	private void dummyNTFetch() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void equalizeVerticalScroll() {
+		v = t;
+	}
+
+	private void evaluateBG() {
+		final int adjustedDot = (currentDot - 1) % 8;
+		switch(adjustedDot) {
+		case 0:															// Assert NT address.
+			addressBus.assertAddress(0x2000 | (v & 0xFFF));
+			break;
+		case 1:															// Latch NT byte
+			ntByte = addressBus.readLatchedData();
+			break;
+		case 2:															// Assert AT address
+			addressBus.assertAddress(0x23C0 | (v & 0xC00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+			break;
+		case 3:															// Latch AT byte
+			atByte = addressBus.readLatchedData();
+			break;
+		case 4:															// Assert PT low address
+			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 |  (v >> 12) & 7);
+			break;
+		case 5:															// Latch PT low byte
+			ptByteLow = addressBus.readLatchedData();
+			break;
+		case 6:															// Assert PT high address
+			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 | 8 |  (v >> 12) & 7);
+			 break;
+		case 7:															// Latch PT high byte		
+			ptByteHigh = addressBus.readLatchedData();
+			incrementHorizontal();
+			updateShiftRegisters();
+			break;
+		}
+		
+	}
+
+	private void updateShiftRegisters() {
+		bgShiftLow &= ~0xFF00;
+		bgShiftLow |= (reverseByte(ptByteLow) << 8);
+		bgShiftHigh &= ~0xFF00;
+		bgShiftHigh |= (reverseByte(ptByteHigh) << 8);
+		bgAtLatchLow = 0;
+		bgAtLatchHigh = 0;
+	}
+	
+	private void shiftBGRegisters() {
+		bgShiftLow >>= 1;
+		bgShiftHigh >>= 1;
+		bgAtShiftLow >>= 1;
+		bgAtShiftHigh >>= 1;
+		bgAtShiftLow &= ~0x80;
+		bgAtShiftLow |= bgAtLatchLow << 7;
+		bgAtShiftHigh &= ~0x80;
+		bgAtShiftHigh |= bgAtLatchHigh << 7;
+	}
+	
+	private void renderDot() {
+		int bgPixel = (bgShiftLow >> (7 - xScroll)) & 1;
+		bgPixel |= (bgShiftHigh >> (7 - xScroll)) & 1 << 1;
+		//bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
+		//bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
+		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
+		shiftBGRegisters();
+	}
+
+	private void incrementHorizontal() {
+		if((v & 0x1F) == 31) {
+			v &= ~0x1F;
+			v ^= 0x400;
+		} else {
+			v++;
 		}
 	}
 	
+	private void incrementVertical() {
+		if( (v & 0x7000) != 0x7000) {
+			v += 0x1000;
+		} else {
+			v &= ~0x7000;
+			int y = (v & 0x3E0) >> 5;
+			if(y == 29) {
+				y = 0;
+				v ^= 0x800;
+			} else if(y == 31) {
+				y = 0;
+			} else {
+				y += 1;
+			}
+			v = (v & ~0x3E0) | (y << 5);
+		}
+	}
+
 	private void updateScreen() {
 		int pixel;
 		int row;
@@ -239,8 +362,7 @@ public class PPU {
 	}
 
 	public int[] getFrame() {
-		//renderFrame();
-		updateScreen();
+		//updateScreen();
 		cycleCount = 0;
 		return frame;
 	}
@@ -254,12 +376,27 @@ public class PPU {
 	}
 	
 	public int getByte(int address) {
+		if(address >= 0x3F00) {
+			return paletteRam.read(address - 0x3F00);
+		}
 		addressBus.assertAddress(address);
 		return addressBus.readLatchedData();
 	}
 	
 	public int getPPUCTRL() {
 		return PPU_CTRL;
+	}
+	
+	//Index 1==0b0001 => 0b1000
+	//Index 7==0b0111 => 0b1110
+	//etc
+	private int[] lookup = new int[] {
+	0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+	0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
+
+	private int reverseByte(int n) {
+	   // Reverse the top and bottom nibble then swap them.
+	   return (lookup[n&0b1111] << 4) | lookup[n>>4];
 	}
 	
 	

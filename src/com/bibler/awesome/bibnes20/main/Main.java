@@ -16,6 +16,7 @@ public class Main {
 		runner.setConsole(console);
 		tvOutFrame.setRunner(runner);
 		debug.setConsole(console);
+		console.getMotherboard().setDebugFrame(debug);
 		runner.setDebugFrame(debug);
 	}
 

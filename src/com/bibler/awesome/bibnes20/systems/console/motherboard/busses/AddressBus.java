@@ -35,7 +35,7 @@ public class AddressBus {
 		if(address < 0x2000) {
 			selector = RAM_BUS;
 			latch(cpuRam.read(address));
-		} else if(address >= 0x2000 && address <= 0x2007) {
+		} else if(address >= 0x2000 && address <= 0x4000) {
 			selector = PPU_BUS;
 		} else if(address == 0x4016) {
 			selector = CNTR_BUS;
@@ -49,8 +49,8 @@ public class AddressBus {
 		this.address = address;
 		if(address < 0x2000) {
 			cpuRam.write(address, latchedData);
-		} else if(address >= 0x2000 && address <= 0x2007) {
-			ppu.write(address - 0x2000, latchedData);
+		} else if(address >= 0x2000 && address <= 0x4000) {
+			ppu.write((address - 0x2000) % 8, latchedData);
 		} else if(address == 0x4016) {
 			controllerPort.write();
 		}else if(address >= gamePakAddressStart) {

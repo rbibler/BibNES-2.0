@@ -8,6 +8,8 @@ import javax.swing.JTabbedPane;
 
 import com.bibler.awesome.bibnes20.systems.console.Console;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.ppu.PPU;
+import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
+import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 
 public class DebugFrame extends JFrame {
 
@@ -22,15 +24,15 @@ public class DebugFrame extends JFrame {
 	private JTabbedPane memoryViewPane;
 	private VideoViewPanel nametablePanel;
 	private VideoViewPanel patterntablePanel;
-	private DebugMemoryView ppuRam;
-	private DebugMemoryView cpuRam;
-	private DebugMemoryView ppuObject;
-	private DebugMemoryView chrRom;
-	private DebugMemoryView prgRom;
-	private DebugMemoryView prgRam;
-	private DebugMemoryView chrRam;
 	private NametableView[] nameTables;
 	private PatterntableView[] patternTables;
+	
+	private DebugMemoryView[] memoryViews = new DebugMemoryView[] {
+		new DebugMemoryView("PPU Ram"), new DebugMemoryView("PPU Objects"),
+		new DebugMemoryView("CPU Ram"), new DebugMemoryView("CHR Rom"),
+		new DebugMemoryView("CHR Ram"), new DebugMemoryView("PRG Rom"),
+		new DebugMemoryView("PRG Ram")
+	};
 	
 	private Console console;
 	
@@ -49,13 +51,9 @@ public class DebugFrame extends JFrame {
 	
 	private void initializeMemoryViews() {
 		memoryViewPane = new JTabbedPane();
-		memoryViewPane.addTab("PPU Ram", ppuRam);
-		memoryViewPane.addTab("PPU Objects", ppuObject);
-		memoryViewPane.addTab("CPU Ram", cpuRam);
-		memoryViewPane.addTab("CHR Rom", chrRom);
-		memoryViewPane.addTab("CHR Ram", chrRam);
-		memoryViewPane.addTab("PRG Rom", prgRom);
-		memoryViewPane.addTab("PRG Ram", prgRam);
+		for(DebugMemoryView view : memoryViews) {
+			memoryViewPane.addTab(view.getTitle(), view);
+		}
 		
 	}
 	
@@ -104,5 +102,16 @@ public class DebugFrame extends JFrame {
 		for(NametableView ntView : nameTables) {
 			ntView.updateFrame(console.getMotherboard().getPPU());
 		}
+	}
+	
+	public void setMemory(RAM ppuRam, RAM cpuRam, GamePak gamePak) {
+		setMemory(0, ppuRam.getMemArray());
+		setMemory(2, cpuRam.getMemArray());
+		setMemory(3, gamePak.getCHRRom().getMemArray());
+		setMemory(5, gamePak.getPRGRom().getMemArray());
+	}
+	
+	private void setMemory(int memoryViewIndex, int[] viewData) {
+		memoryViews[memoryViewIndex].setViewData(viewData);
 	}
 }

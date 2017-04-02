@@ -63,6 +63,7 @@ public class FileUtils {
 			stream.read(headerBytes);
 			final int prgSize = headerBytes[4] * 0x4000;
 			final int chrSize = headerBytes[5] * 0x2000;
+			final int mirroring = headerBytes[6] & 1;
 			int[] prgRom = new int[0x8000];
 			final int prgMult = 0x8000 / prgSize;
 			for(int i = 0; i < prgSize; i++) {
@@ -81,6 +82,7 @@ public class FileUtils {
 			}
 			pak.setPrgRom(new ROM(prgRom));
 			pak.setChrRom(new ROM(chrRom));
+			pak.setMirroring(mirroring);
 		} catch(IOException e) {}
 		return pak;
 	}

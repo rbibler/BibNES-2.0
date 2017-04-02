@@ -110,9 +110,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		if(message.equalsIgnoreCase("LOAD_ROM")) {
 			Object[] messagePacketArray = (Object[]) messagePacket;
 			GamePak pak = (GamePak) messagePacketArray[0];
-			int[] ram = (int[]) messagePacketArray[1];
 			console.insertGamePak(pak);
-			console.setCPURam(ram);
 		} else if(message.equalsIgnoreCase("STEP")) {
 			if(t == null || t.isAlive() == false) {
 				startEmulator();

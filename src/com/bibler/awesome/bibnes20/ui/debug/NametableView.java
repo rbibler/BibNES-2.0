@@ -1,5 +1,6 @@
 package com.bibler.awesome.bibnes20.ui.debug;
 
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 
@@ -20,6 +21,7 @@ public class NametableView extends JPanel {
 	public NametableView(int nametableNumber) {
 		this.nametableNumber = nametableNumber;
 		displayImage = new BufferedImage(256, 240, BufferedImage.TYPE_4BYTE_ABGR);
+		setPreferredSize(new Dimension(256, 240));
 	}
 	
 	public void updateFrame(PPU ppu) {
@@ -36,7 +38,7 @@ public class NametableView extends JPanel {
 		int attrX;
 		int attrY;
 		int curAttr;
-		final int length = displayImage.getHeight() * displayImage.getWidth();
+		final int length = 256*240;
 		for(int i = 0; i < length; i++) {
 			x = i % 256;
 			y = (i / 256);

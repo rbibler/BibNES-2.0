@@ -4,6 +4,7 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.Motherboard;
 import com.bibler.awesome.bibnes20.systems.console.output.TVOut;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
+import com.bibler.awesome.bibnes20.ui.debug.DebugFrame;
 
 public class Console {
 	
@@ -28,11 +29,6 @@ public class Console {
 		currentGamePak = gamePak;
 		motherboard.acceptGamePak(gamePak);
 		reset();
-	}
-
-	public void setCPURam(int[] cpuRAM) {
-		motherboard.setCPURam(new RAM(cpuRAM));
-		
 	}
 
 	public void displayFrame() {

@@ -82,13 +82,12 @@ public class TVOutMenuManager extends JMenuBar {
 	}
 	
 	protected void loadNES() {
-		JFileChooser chooser = new JFileChooser();
+		JFileChooser chooser = new JFileChooser("C:/users/ryan/desktop/nes/roms/mapper 0");
 		if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 			File f = chooser.getSelectedFile();
 			if(f.getName().toLowerCase().endsWith(".nes")) {
 				GamePak pak = FileUtils.loadRomFromFile(f);
-				int[] ram = new int[0x2000];
-				runner.takeNotice("LOAD_ROM", new Object[] {pak, ram});
+				runner.takeNotice("LOAD_ROM", new Object[] {pak});
 			}
 		}
 	}

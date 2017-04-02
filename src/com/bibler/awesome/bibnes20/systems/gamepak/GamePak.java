@@ -9,6 +9,7 @@ public class GamePak {
 	private ROM chrRom;
 	private RAM prgRam;
 	private RAM chrRam;
+	private int mirroring;
 	
 	public GamePak() {
 		
@@ -37,6 +38,22 @@ public class GamePak {
 	
 	public void writeChrRom(int address, int data) {
 		return;
+	}
+	
+	public void setMirroring(int mirroring) {
+		this.mirroring = mirroring;
+	}
+
+	public int getMirroring() {
+		return mirroring;
+	}
+
+	public ROM getCHRRom() {
+		return chrRom;
+	}
+	
+	public ROM getPRGRom() {
+		return prgRom;
 	}
 
 }

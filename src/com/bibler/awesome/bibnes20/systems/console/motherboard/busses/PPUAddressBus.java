@@ -22,49 +22,62 @@ public class PPUAddressBus {
 	 */
 	
 	private RAM ppuRam;
-	private RAM paletteRam;
 	private GamePak gamePak;
 	private PPU ppu;
+	private int currentMirroring = MIRROR_V;
+	
+	public static final int MIRROR_H = 0x00;
+	public static final int MIRROR_V = 0x01;
+	public static final int MIRROR_1 = 0x02;
+	public static final int MIRROR_4 = 0x03;
 	
 	public static final int PAL_BUS = 0x03;
 	public static final int CHR_BUS = 0x04;
 	public static final int RAM_BUS = 0x05;
 	
 	
-	private int address;
+
 	private int latchedData;
 	private int selector;
 	
 	public PPUAddressBus(RAM ppuRam, PPU ppu) {
 		this.ppuRam = ppuRam;
 		this.ppu = ppu;
-		paletteRam = new RAM(0x20);
 	}
 
 
 	public void assertAddress(int address) {
-		this.address = address;
 		if(address < 0x2000) {																		// CHR pattern tables
 			selector = CHR_BUS;
 			latch(gamePak.readChrRom(address));
 		} else if(address < 0x3F00) {																// Nametables (PPU RAM)
 			selector = RAM_BUS;
-			latch(ppuRam.read(address - 0x2000));
-		} else if(address < 0x4000) {																// Pallete RAM
-			selector = PAL_BUS;
-			latch(paletteRam.read(address - 0x3F00));
-		}
+			int tempAddress = address;
+			if(currentMirroring == MIRROR_H) {
+				if((address & 0x800) > 0) {
+					tempAddress |= 0x400;
+				} else {
+					tempAddress &= ~0x400;
+				}
+			} 
+			latch(ppuRam.read(tempAddress - 0x2000));
+		} 
 	}
 	
 	public void assertAddressAndWrite(int address) {
-		this.address = address;
 		if(address < 0x2000) {																		// CHR pattern tables
 			gamePak.writeChrRom(address, latchedData);
 		} else if(address < 0x3F00) {																// Nametables (PPU RAM)
-			ppuRam.write(address - 0x2000, latchedData);
-		} else if(address < 0x4000) {																// Pallete RAM
-			paletteRam.write(address - 0x3F00, latchedData);
-		}
+			int tempAddress = address;
+			if(currentMirroring == MIRROR_H) {
+				if((address & 0x800) > 0) {
+					tempAddress |= 0x400;
+				} else {
+					tempAddress &= ~0x400;
+				}
+			} 
+			ppuRam.write(tempAddress - 0x2000, latchedData);
+		} 
 	}
 	
 	public void latch(int dataToLatch) {
@@ -78,6 +91,8 @@ public class PPUAddressBus {
 
 	public void setGamePak(GamePak gamePak) {
 		this.gamePak = gamePak;
+		this.currentMirroring = gamePak.getMirroring();
+		System.out.println("MIRRORING!: " +  currentMirroring);
 	}
 
 }

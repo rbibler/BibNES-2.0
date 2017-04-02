@@ -7,6 +7,7 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.ppu.PPU;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
+import com.bibler.awesome.bibnes20.ui.debug.DebugFrame;
 
 public class Motherboard {
 	
@@ -15,14 +16,15 @@ public class Motherboard {
 	private RAM cpuRam;
 	private RAM ppuRam;
 	private AddressBus addressBus;
+	private DebugFrame debugFrame;
 	
 	
 	public Motherboard() {
 		ppu = new PPU();
-		ppuRam = new RAM(0x1000);
+		ppuRam = new RAM(0x800);
 		PPUAddressBus ppuAddressBus = new PPUAddressBus(ppuRam, ppu);
 		ppu.setAddressBus(ppuAddressBus);
-		cpuRam = new RAM(0x2000);
+		cpuRam = new RAM(0x800);
 		KeyboardController controller = new KeyboardController();
 		addressBus = new AddressBus(cpuRam, ppu, controller);
 		cpu = new CPU(addressBus);
@@ -40,13 +42,7 @@ public class Motherboard {
 	public void acceptGamePak(GamePak gamePak) {
 		addressBus.setGamePak(gamePak);
 		ppu.getAddressBus().setGamePak(gamePak);
-	}
-
-	public void setCPURam(RAM cpuRam) {
-		this.cpuRam = cpuRam;
-		addressBus.setCPURam(cpuRam);
-		
-		
+		debugFrame.setMemory(ppuRam, cpuRam, gamePak);
 	}
 
 	public void cyclePPU() {
@@ -64,6 +60,11 @@ public class Motherboard {
 
 	public PPU getPPU() {
 		return ppu;
+	}
+
+	public void setDebugFrame(DebugFrame debugFrame) {
+		this.debugFrame = debugFrame;
+		
 	}
 
 }
