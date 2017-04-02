@@ -3,6 +3,7 @@ package com.bibler.awesome.bibnes20.systems.console.motherboard.ppu;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddressBus;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
+import com.bibler.awesome.bibnes20.utilities.BitUtils;
 
 public class PPU {
 	
@@ -253,9 +254,9 @@ public class PPU {
 
 	private void updateShiftRegisters() {
 		bgShiftLow &= ~0xFF00;
-		bgShiftLow |= (reverseByte(ptByteLow) << 8);
+		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
-		bgShiftHigh |= (reverseByte(ptByteHigh) << 8);
+		bgShiftHigh |= (BitUtils.reverseByte(ptByteHigh) << 8);
 		bgAtLatchLow = 0;
 		bgAtLatchHigh = 0;
 	}
@@ -386,17 +387,9 @@ public class PPU {
 	public int getPPUCTRL() {
 		return PPU_CTRL;
 	}
-	
-	//Index 1==0b0001 => 0b1000
-	//Index 7==0b0111 => 0b1110
-	//etc
-	private int[] lookup = new int[] {
-	0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
-	0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
 
-	private int reverseByte(int n) {
-	   // Reverse the top and bottom nibble then swap them.
-	   return (lookup[n&0b1111] << 4) | lookup[n>>4];
+	public RAM getPaletteRam() {
+		return paletteRam;
 	}
 	
 	

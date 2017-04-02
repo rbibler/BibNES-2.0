@@ -10,6 +10,7 @@ import com.bibler.awesome.bibnes20.systems.console.Console;
 import com.bibler.awesome.bibnes20.systems.console.motherboard.ppu.PPU;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
+import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
 
 public class DebugFrame extends JFrame {
 
@@ -23,9 +24,8 @@ public class DebugFrame extends JFrame {
 	private JTabbedPane videoViewPane;
 	private JTabbedPane memoryViewPane;
 	private VideoViewPanel nametablePanel;
-	private VideoViewPanel patterntablePanel;
 	private NametableView[] nameTables;
-	private PatterntableView[] patternTables;
+	private PatternAndPalettePanel patternAndPalette;
 	
 	private DebugMemoryView[] memoryViews = new DebugMemoryView[] {
 		new DebugMemoryView("PPU Ram"), new DebugMemoryView("PPU Objects"),
@@ -63,11 +63,10 @@ public class DebugFrame extends JFrame {
 				new NametableView(0), new NametableView(1), 
 				new NametableView(2), new NametableView(3)
 		};
-		patternTables = new PatterntableView[2];
+		patternAndPalette = new PatternAndPalettePanel();
 		nametablePanel = new VideoViewPanel(nameTables);
-		patterntablePanel = new VideoViewPanel(patternTables);
 		videoViewPane.addTab("Nametables", nametablePanel);
-		videoViewPane.addTab("PatternTables", patterntablePanel);
+		videoViewPane.addTab("PatternTables", patternAndPalette);
 	}
 	
 	private void initializeStatusView() {
@@ -102,6 +101,7 @@ public class DebugFrame extends JFrame {
 		for(NametableView ntView : nameTables) {
 			ntView.updateFrame(console.getMotherboard().getPPU());
 		}
+		patternAndPalette.updateViews();
 	}
 	
 	public void setMemory(RAM ppuRam, RAM cpuRam, GamePak gamePak) {
@@ -113,5 +113,13 @@ public class DebugFrame extends JFrame {
 	
 	private void setMemory(int memoryViewIndex, int[] viewData) {
 		memoryViews[memoryViewIndex].setViewData(viewData);
+	}
+	
+	public void setPPU(PPU ppu) {
+		patternAndPalette.setPPU(ppu);
+	}
+	
+	public void setChrRom(ROM chrRom) {
+		patternAndPalette.setChrRom(chrRom);
 	}
 }

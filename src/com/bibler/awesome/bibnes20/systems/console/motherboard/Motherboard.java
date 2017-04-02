@@ -43,6 +43,8 @@ public class Motherboard {
 		addressBus.setGamePak(gamePak);
 		ppu.getAddressBus().setGamePak(gamePak);
 		debugFrame.setMemory(ppuRam, cpuRam, gamePak);
+		debugFrame.setPPU(ppu);
+		debugFrame.setChrRom(gamePak.getCHRRom());
 	}
 
 	public void cyclePPU() {

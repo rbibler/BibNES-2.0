@@ -4,6 +4,7 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.Motherboard;
 import com.bibler.awesome.bibnes20.systems.console.output.TVOut;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
+import com.bibler.awesome.bibnes20.systems.utilitychips.ROM;
 import com.bibler.awesome.bibnes20.ui.debug.DebugFrame;
 
 public class Console {
@@ -34,4 +35,5 @@ public class Console {
 	public void displayFrame() {
 		tvOut.displayFrame(motherboard.getFrame());
 	}
+
 }
