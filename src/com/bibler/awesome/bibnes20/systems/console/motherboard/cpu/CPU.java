@@ -2481,7 +2481,7 @@ public class CPU {
 					addressBus.latch(accumulator);
 					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
 					if( (effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
-						System.out.println("STA indexed indirect");
+						//System.out.println("STA indexed indirect");
 					}
 					tN = -1;
 					break;
@@ -2589,7 +2589,7 @@ public class CPU {
 					addressBus.latch(accumulator);
 					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
 					if((effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
-						System.out.println("STA Absolute");
+						//System.out.println("STA Absolute");
 					}
 					tN = -1;
 					break;

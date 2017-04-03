@@ -49,6 +49,7 @@ public class PPU {
 	
 	public PPU() {
 		frame = new int[256 * 240];
+		currentScanline = 261;
 	}
 	
 	public void reset() {
@@ -175,7 +176,7 @@ public class PPU {
 				} else if(currentDot == 257) {
 					v &= ~0x41F;
 					v |= t & 0x41F;
-				} else if(currentDot >= 321 && currentDot <= 337) {
+				} else if(currentDot >= 321 && currentDot < 337) {
 					evaluateBG();
 				} else if(currentDot >= 337 && currentDot <= 340) {
 					dummyNTFetch();
@@ -237,6 +238,12 @@ public class PPU {
 		switch(adjustedDot) {
 		case 0:															// Assert NT address.
 			addressBus.assertAddress(0x2000 | (v & 0xFFF));
+			if(currentDot >= 9 && currentDot != 337) {
+				if(currentDot > 300) {
+					System.out.println("shifted at: " + currentDot);
+				}
+				updateShiftRegisters();
+			}
 			break;
 		case 1:															// Latch NT byte
 			ntByte = addressBus.readLatchedData();
@@ -259,7 +266,6 @@ public class PPU {
 		case 7:															// Latch PT high byte		
 			ptByteHigh = addressBus.readLatchedData();
 			incrementHorizontal();
-			updateShiftRegisters();
 			break;
 		}
 		
@@ -270,8 +276,22 @@ public class PPU {
 		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
 		bgShiftHigh |= (BitUtils.reverseByte(ptByteHigh) << 8);
-		bgAtLatchLow = 0;
-		bgAtLatchHigh = 0;
+		int tempAtByte = 0;
+		if((v >> 1 & 1) == 0) {
+			if((v >> 5 & 1) == 0) {
+				tempAtByte = atByte & 3;
+			} else {
+				tempAtByte = (atByte >> 4) & 3;
+			}
+		} else {
+			if((v >> 5 & 1) == 0) {
+				tempAtByte = atByte >> 2 & 3;
+			} else {
+				tempAtByte = atByte >> 6 & 3;
+			}
+		}
+		bgAtLatchLow = tempAtByte & 1;
+		bgAtLatchHigh = tempAtByte >> 1 & 1;
 	}
 	
 	private void shiftBGRegisters() {
@@ -288,8 +308,8 @@ public class PPU {
 	private void renderDot() {
 		int bgPixel = (bgShiftLow >> (7 - xScroll)) & 1;
 		bgPixel |= (bgShiftHigh >> (7 - xScroll)) & 1 << 1;
-		//bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
-		//bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
+		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
+		bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
 		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
 		shiftBGRegisters();
 	}
