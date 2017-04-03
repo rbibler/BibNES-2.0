@@ -79,6 +79,7 @@ public class KeyboardController extends BaseController {
 		if(keyMap.containsKey(keyEvent)) {
 			returnVal = true;
 			buttonsByte |= keyMap.get(keyEvent);
+			System.out.println("BUTTON PRESSED");
 		}
 		return returnVal;
 	}

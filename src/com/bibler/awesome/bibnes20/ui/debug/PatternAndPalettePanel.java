@@ -31,8 +31,8 @@ public class PatternAndPalettePanel extends JPanel {
 		JPanel panel = new JPanel();
 		panel.setLayout(new BorderLayout());
 		panel.setMaximumSize(new Dimension(1024, 512));
-		panel.add(leftPattern, BorderLayout.WEST);
-		panel.add(rightPattern, BorderLayout.EAST);
+		panel.add(leftPattern, BorderLayout.CENTER);
+		panel.add(rightPattern, BorderLayout.CENTER);
 		add(panel, BorderLayout.CENTER);
 		add(paletteGrid, BorderLayout.SOUTH);
 	}

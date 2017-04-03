@@ -105,16 +105,19 @@ public class PPU {
 			}
 			break;
 		case 6:
+			//System.out.println("Address write w " + w + " : " + Integer.toHexString(dataToWrite).toUpperCase());
 			if(w == 0) {
 				t &= ~0x7F00;
 				t |= (dataToWrite & 0x3F) << 8;
-				w  =1;
+				w = 1;
+				
 			} else {
 				t &= ~0xFF;
 				t |= (dataToWrite & 0xFF);
 				w = 0;
 				v = t;
 			}
+			
 			break;
 		case 7:
 			PPU_DATA = dataToWrite;
@@ -124,9 +127,19 @@ public class PPU {
 				addressBus.latch(dataToWrite);
 				addressBus.assertAddressAndWrite(v);
 			}
-			v += ((PPU_CTRL & 0x02) > 0 ? 32 : 1);
+			final int vInc = (PPU_CTRL >> 2 & 1) == 0 ? 1 : 32;
+			if(!renderingAndVisible()) {
+				v += vInc;
+			} else {
+				incrementHorizontal();
+				incrementVertical();
+			}
 			break;
 		}
+	}
+	
+	private boolean renderingAndVisible() {
+		return renderOn() && (currentScanline <= 240 || currentScanline == 261);
 	}
 	
 	private boolean renderOn() {

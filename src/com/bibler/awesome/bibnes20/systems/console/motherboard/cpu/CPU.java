@@ -2480,6 +2480,9 @@ public class CPU {
 				case 5:
 					addressBus.latch(accumulator);
 					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					if( (effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
+						System.out.println("STA indexed indirect");
+					}
 					tN = -1;
 					break;
 			}
@@ -2585,6 +2588,9 @@ public class CPU {
 				case 3:
 					addressBus.latch(accumulator);
 					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					if((effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
+						System.out.println("STA Absolute");
+					}
 					tN = -1;
 					break;
 			}
@@ -2703,6 +2709,9 @@ public class CPU {
 				effectiveAddressHigh = 0;
 				addressBus.latch(accumulator);
 				addressBus.assertAddressAndWrite(effectiveAddressLow | (effectiveAddressHigh << 8));
+				if((effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
+					System.out.println("STA ZP indexed");
+				}
 				tN = -1;
 				break;
 			}
@@ -2762,6 +2771,9 @@ public class CPU {
 				case 4:
 					addressBus.latch(accumulator);
 					addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+					if((effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
+						System.out.println("STA Absolute indexed y");
+					}
 					tN = -1;
 					break;
 			}
@@ -2803,6 +2815,9 @@ public class CPU {
 			case 4:
 				addressBus.latch(accumulator);
 				addressBus.assertAddressAndWrite(effectiveAddressLow | effectiveAddressHigh << 8);
+				if((effectiveAddressLow | effectiveAddressHigh << 8) == 0x2006) {
+					System.out.println("STA Absolute Indexed X");
+				}
 				tN = -1;
 				break;
 		}
