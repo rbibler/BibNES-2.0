@@ -49,7 +49,7 @@ public class PPU {
 	
 	public PPU() {
 		frame = new int[256 * 240];
-		currentScanline = 261;
+		//currentScanline = 261;
 	}
 	
 	public void reset() {
@@ -167,6 +167,14 @@ public class PPU {
 	}
 	
 	private void cycleRenderOn() {
+		if(currentScanline < 240 && currentDot >= 2) {
+			if(currentDot <= 256) {
+				renderDot();
+			}
+			if(currentDot <= 257 || (currentDot >= 322 && currentDot <= 337)) {
+				shiftBGRegisters();
+			}
+		}
 		if(currentScanline < 261) {
 			if(currentScanline < 240) {
 				if(currentDot < 257) {
@@ -177,9 +185,13 @@ public class PPU {
 				} else if(currentDot == 257) {
 					v &= ~0x41F;
 					v |= t & 0x41F;
+					updateShiftRegisters();
 				} else if(currentDot >= 321 && currentDot < 337) {
 					evaluateBG();
 				} else if(currentDot >= 337 && currentDot <= 340) {
+					if(currentDot == 337) {
+						updateShiftRegisters();
+					}
 					dummyNTFetch();
 				}
 			} else if(currentScanline == 241){
@@ -201,22 +213,19 @@ public class PPU {
 			} else if(currentDot == 257) {
 				v &= ~0x41F;
 				v |= t & 0x41F;
+				updateShiftRegisters();
 			} else if(currentDot >= 280 && currentDot <= 304) {
 				equalizeVerticalScroll();
 			} else if(currentDot >= 321 && currentDot < 337) {
 				evaluateBG();
 			} else if(currentDot >= 337 && currentDot <= 340) {
+				if(currentDot == 337) {
+					updateShiftRegisters();
+				}
 				dummyNTFetch();
 			}
 		}
-		if(currentScanline < 240 && currentDot >= 2) {
-			if(currentDot <= 256) {
-				renderDot();
-			}
-			if(currentDot <= 257 || (currentDot >= 322 && currentDot <= 337)) {
-				shiftBGRegisters();
-			}
-		}
+		
 	}
 	
 	private void cycleRenderOff() {
@@ -244,38 +253,32 @@ public class PPU {
 		switch(adjustedDot) {
 		case 0:															// Assert NT address.
 			addressBus.assertAddress(0x2000 | (v & 0xFFF));
-			if(currentDot >= 9 && currentDot != 337) {
+			System.out.println("SL: " + currentScanline + " Dot: " + currentDot + " NT: " + Integer.toHexString(v & 0xFFF));
+			if(currentDot >= 9 && currentDot != 321) {
 				updateShiftRegisters();
 			}
 			//System.out.println("NT Address Fetch: " + currentDot);
 			break;
 		case 1:															// Latch NT byte
 			ntByte = addressBus.readLatchedData();
-			//System.out.println("NT Byte Fetch: " + currentDot);
 			break;
 		case 2:															// Assert AT address
 			addressBus.assertAddress(0x23C0 | (v & 0xC00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
-			System.out.println("AT Address Fetch: " + currentDot);
 			break;
 		case 3:															// Latch AT byte
 			atByte = addressBus.readLatchedData();
-			//System.out.println("AT Byte Fetch: " + currentDot);
 			break;
 		case 4:															// Assert PT low address
 			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 |  (v >> 12) & 7);
-			//System.out.println("Low BG Address Fetch: " + currentDot);
 			break;
 		case 5:															// Latch PT low byte
 			ptByteLow = addressBus.readLatchedData();
-			//System.out.println("Low BG Byte Fetch: " + currentDot);
 			break;
 		case 6:															// Assert PT high address
 			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 | 8 |  (v >> 12) & 7);
-			//System.out.println("High BG Address Fetch: " + currentDot);
 			 break;
 		case 7:															// Latch PT high byte		
 			ptByteHigh = addressBus.readLatchedData();
-			//System.out.println("High BG Byte Fetch: " + currentDot);
 			incrementHorizontal();
 			break;
 		}
@@ -283,6 +286,7 @@ public class PPU {
 	}
 
 	private void updateShiftRegisters() {
+		//System.out.println("Update Shift Registers: " + currentDot);
 		bgShiftLow &= ~0xFF00;
 		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
