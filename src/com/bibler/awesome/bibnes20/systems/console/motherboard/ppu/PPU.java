@@ -160,6 +160,7 @@ public class PPU {
 			if(currentScanline == linesPerFrame) {
 				currentDot = 0;
 				currentScanline = 0;
+				System.out.println("-----Frame-----");
 			}
 		}
 		//System.out.println("Scanline: " + currentScanline + " Pixel: " + currentDot);
@@ -202,14 +203,19 @@ public class PPU {
 				v |= t & 0x41F;
 			} else if(currentDot >= 280 && currentDot <= 304) {
 				equalizeVerticalScroll();
-			} else if(currentDot >= 321 && currentDot <= 337) {
+			} else if(currentDot >= 321 && currentDot < 337) {
 				evaluateBG();
 			} else if(currentDot >= 337 && currentDot <= 340) {
 				dummyNTFetch();
 			}
 		}
-		if(currentScanline < 240 && currentDot >= 1 && currentDot <= 256) {
-			renderDot();
+		if(currentScanline < 240 && currentDot >= 2) {
+			if(currentDot <= 256) {
+				renderDot();
+			}
+			if(currentDot <= 257 || (currentDot >= 322 && currentDot <= 337)) {
+				shiftBGRegisters();
+			}
 		}
 	}
 	
@@ -239,32 +245,37 @@ public class PPU {
 		case 0:															// Assert NT address.
 			addressBus.assertAddress(0x2000 | (v & 0xFFF));
 			if(currentDot >= 9 && currentDot != 337) {
-				if(currentDot > 300) {
-					System.out.println("shifted at: " + currentDot);
-				}
 				updateShiftRegisters();
 			}
+			//System.out.println("NT Address Fetch: " + currentDot);
 			break;
 		case 1:															// Latch NT byte
 			ntByte = addressBus.readLatchedData();
+			//System.out.println("NT Byte Fetch: " + currentDot);
 			break;
 		case 2:															// Assert AT address
 			addressBus.assertAddress(0x23C0 | (v & 0xC00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
+			System.out.println("AT Address Fetch: " + currentDot);
 			break;
 		case 3:															// Latch AT byte
 			atByte = addressBus.readLatchedData();
+			//System.out.println("AT Byte Fetch: " + currentDot);
 			break;
 		case 4:															// Assert PT low address
 			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 |  (v >> 12) & 7);
+			//System.out.println("Low BG Address Fetch: " + currentDot);
 			break;
 		case 5:															// Latch PT low byte
 			ptByteLow = addressBus.readLatchedData();
+			//System.out.println("Low BG Byte Fetch: " + currentDot);
 			break;
 		case 6:															// Assert PT high address
 			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 | 8 |  (v >> 12) & 7);
+			//System.out.println("High BG Address Fetch: " + currentDot);
 			 break;
 		case 7:															// Latch PT high byte		
 			ptByteHigh = addressBus.readLatchedData();
+			//System.out.println("High BG Byte Fetch: " + currentDot);
 			incrementHorizontal();
 			break;
 		}
@@ -303,6 +314,7 @@ public class PPU {
 		bgAtShiftLow |= bgAtLatchLow << 7;
 		bgAtShiftHigh &= ~0x80;
 		bgAtShiftHigh |= bgAtLatchHigh << 7;
+		//System.out.println("Shifted at : " + currentDot);
 	}
 	
 	private void renderDot() {
@@ -311,7 +323,6 @@ public class PPU {
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
 		bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
 		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
-		shiftBGRegisters();
 	}
 
 	private void incrementHorizontal() {
