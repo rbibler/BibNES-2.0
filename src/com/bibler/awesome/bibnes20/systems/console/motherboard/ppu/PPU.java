@@ -223,6 +223,160 @@ public class PPU {
 				dummyNTFetch();
 			}
 		}*/
+		ntMemoryAccess();
+		shiftRegisterReload();
+		hCounterIncrement();
+		vCounterUpdate();
+		hCounterReload();
+		vCounterReload();
+		shiftRegisters();
+		pixelRender();
+		if(currentScanline == 241){
+			if(currentDot == 1) {
+				PPU_STATUS |= 0x80; 											// Set Vblank flag
+				if((PPU_CTRL & 0x80) > 0) {
+					cpu.setNMI();
+				}
+			}
+		} else if(currentScanline == 261) {
+			if(currentDot == 1) {
+				PPU_STATUS &= ~0x80;		
+			}
+		}
+	}
+	
+	private void pixelRender() {
+		if(currentScanline <= 239) {
+			if(currentDot >= 1 && currentDot < 257) {
+				renderDot();
+			}
+		}
+	}
+
+	private void shiftRegisters() {
+		if(currentScanline <= 239) {
+			if((currentDot >= 2 && currentDot < 257) || (currentDot >= 321 && currentDot <= 336) ) {
+				shiftBGRegisters();
+			}
+		} else if(currentScanline == 261) {
+			if(currentDot >= 321 && currentDot <= 336) {
+				shiftBGRegisters();
+			}
+		}
+	}
+
+	private void vCounterReload() {
+		if(currentScanline == 261) {
+			if(currentDot >= 280 && currentDot <= 304) {
+				v = t;
+			}
+		}
+	}
+
+	private void hCounterReload() {
+		if(currentScanline <= 239 || currentScanline == 261) {
+			if(currentDot == 257) {
+				v &= ~0x41F;
+				v |= t & 0x41F;
+			}
+		}
+	}
+
+	private void vCounterUpdate() {
+		if(currentScanline <= 239 || currentScanline == 261) {
+			if(currentDot == 256) {
+				incrementVertical();
+			}
+		}
+	}
+
+	private void hCounterIncrement() {
+		if(currentScanline <= 239 || currentScanline == 261) {
+			switch(currentDot) {
+			case 8:
+			case 16:
+			case 24:
+			case 32:
+			case 40:
+			case 48:
+			case 56:
+			case 64:
+			case 72:
+			case 80:
+			case 88:
+			case 96:
+			case 104:
+			case 112:
+			case 120:
+			case 128:
+			case 136:
+			case 144:
+			case 152:
+			case 160:
+			case 168:
+			case 176:
+			case 184:
+			case 192:
+			case 200:
+			case 208:
+			case 216:
+			case 224:
+			case 232:
+			case 240:
+			case 248:
+			case 328:
+			case 336:
+				incrementHorizontal();
+				break;
+			}
+		}
+	}
+
+	private void shiftRegisterReload() {
+		if(currentScanline <= 239 || currentScanline == 261) {
+			switch(currentDot) {
+			case 9:
+			case 17:
+			case 25:
+			case 33:
+			case 41:
+			case 49:
+			case 57:
+			case 65:
+			case 73:
+			case 81:
+			case 89:
+			case 97:
+			case 105:
+			case 113:
+			case 121:
+			case 129:
+			case 137:
+			case 145:
+			case 153:
+			case 161:
+			case 169:
+			case 177:
+			case 185:
+			case 193:
+			case 201:
+			case 209:
+			case 217:
+			case 225:
+			case 233:
+			case 241:
+			case 249:
+			case 257:
+			case 329:
+			case 337:
+				updateShiftRegisters();
+				break;
+			}
+		}
+		
+	}
+
+	private void ntMemoryAccess() {
 		if(currentScanline <= 239 || currentScanline == 261) {
 			switch(currentDot) {
 			case 1:
@@ -514,10 +668,8 @@ public class PPU {
 			case 328:
 			case 336:
 				highPTByteFetch();
-				break;
-				
+				break;		
 			}
-			
 		}
 	}
 	
