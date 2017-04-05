@@ -11,6 +11,7 @@ public class BitUtils {
 
 	public static int reverseByte(int n) {
 	   // Reverse the top and bottom nibble then swap them.
+		n = n & 0xFF;
 	   return (lookup[n&0b1111] << 4) | lookup[n>>4];
 	}
 

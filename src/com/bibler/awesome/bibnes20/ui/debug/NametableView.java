@@ -1,5 +1,6 @@
 package com.bibler.awesome.bibnes20.ui.debug;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
@@ -78,6 +79,20 @@ public class NametableView extends JPanel {
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		g.drawImage(displayImage, 0, 0, null);
+		drawGrid(g);
+	}
+	
+	private void drawGrid(Graphics g) {
+		int gridSize = (getWidth() / 256) * 8;
+		int width = getWidth();
+		int height = getHeight();
+		g.setColor(Color.RED);
+		for(int i = 0; i < 32; i++) {
+			g.drawLine(i * gridSize, 0, i * gridSize, height);
+		}
+		for(int i = 0; i < 30; i++) {
+			g.drawLine(0, i * gridSize, width, i * gridSize);
+		}
 	}
 
 }

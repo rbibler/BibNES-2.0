@@ -14,7 +14,10 @@ public class ROM {
 		memoryArray = new int[size];
 	}
 	public int read(int address) {
-		return memoryArray[address % size];
+		if(address >= 0) {
+			return memoryArray[address % size];
+		}
+		return 0;
 	}
 
 	public void write(int address, int data) {

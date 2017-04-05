@@ -47,8 +47,8 @@ public class Motherboard {
 		debugFrame.setChrRom(gamePak.getCHRRom());
 	}
 
-	public void cyclePPU() {
-		ppu.cycle();
+	public boolean cyclePPU() {
+		return ppu.cycle();
 		
 	}
 	

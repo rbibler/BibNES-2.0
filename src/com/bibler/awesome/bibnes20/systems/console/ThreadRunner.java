@@ -42,12 +42,13 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 	}
 	
 	int cycleCount = 0;
+	private boolean frame;
 	
 	@Override
 	public void run() {
 		while(!Thread.interrupted()) {
 			if(!pause) {
-				for(long i = 0; i < 357366; i++) {
+				//for(long i = 0; i < 357366; i++) {
 					if(cpuDivider == 12) {
 						cpuDivider = 0;
 						clockCPU();
@@ -55,21 +56,25 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 					cpuDivider++;
 					if(ppuDivider == 4) {
 						ppuDivider = 0;
-						clockPPU();
+						frame = clockPPU();
 					}
 					ppuDivider++;
-				}
-				console.displayFrame();
-				debugFrame.updateFrame();
-				final long timeTaken = System.currentTimeMillis() - lastFrameTime;
-				final long sleepTime = FPS - timeTaken;
+				//}
+					if(frame) {
+						frame = false;
+						console.displayFrame();
+						debugFrame.updateFrame();
+					
+						final long timeTaken = System.currentTimeMillis() - lastFrameTime;
+						final long sleepTime = FPS - timeTaken;
 				//System.out.println("Sleep time: " + sleepTime);
-				if(sleepTime > 0) {
-					try {
-						Thread.sleep(sleepTime);
-					} catch(InterruptedException e) {}
-				}
-				lastFrameTime = System.currentTimeMillis();
+						if(sleepTime > 0) {
+							try {
+								Thread.sleep(sleepTime);
+							} catch(InterruptedException e) {}
+						}
+						lastFrameTime = System.currentTimeMillis();
+					}
 			} 
 		}
 	}
@@ -78,8 +83,8 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		motherboard.cycleCPU();
 	}
 	
-	private void clockPPU() {
-		motherboard.cyclePPU();
+	private boolean clockPPU() {
+		return motherboard.cyclePPU();
 	}
 	
 	private void step() {
