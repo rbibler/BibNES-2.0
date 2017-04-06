@@ -3,6 +3,7 @@ package com.bibler.awesome.bibnes20.systems.console.output;
 import javax.swing.JFrame;
 
 import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
+import com.bibler.awesome.bibnes20.systems.console.motherboard.ppu.PPU;
 
 public class TVOut extends JFrame {
 
@@ -40,6 +41,10 @@ public class TVOut extends JFrame {
 		add(display);
 		pack();
 		setVisible(true);
+	}
+
+	public void setPPU(PPU ppu) {
+		display.setPPU(ppu);
 	}
 	
 

@@ -15,6 +15,7 @@ public class Main {
 		ThreadRunner runner = new ThreadRunner();
 		runner.setConsole(console);
 		tvOutFrame.setRunner(runner);
+		tvOutFrame.setPPU(console.getMotherboard().getPPU());
 		debug.setConsole(console);
 		console.getMotherboard().setDebugFrame(debug);
 		runner.setDebugFrame(debug);

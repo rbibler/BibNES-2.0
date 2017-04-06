@@ -10,7 +10,11 @@ public class PPU {
 	private PPUAddressBus addressBus;
 	private RAM paletteRam = new RAM(0x20);
 	private CPU cpu;
-	private int[] frame;
+	private int[] frame = new int[256 * 240];
+	private int[] atBytes = new int[256 * 240];
+	private int[] ntBytes = new int[256 * 240];
+	private int[] ptLowBytes = new int[256 * 240];
+	private int[] ptHighBytes = new int[256 * 240];
 	int cycleCount;
 	
 	private int linesPerFrame = 262;
@@ -182,12 +186,12 @@ public class PPU {
 				} else if(currentDot == 257) {
 					v &= ~0x41F;
 					v |= t & 0x41F;
-					updateShiftRegisters();
+					//updateShiftRegisters();
 				} else if(currentDot >= 321 && currentDot < 337) {
 					evaluateBG();
 				} else if(currentDot >= 337 && currentDot <= 340) {
 					if(currentDot == 337) {
-						updateShiftRegisters();
+						//updateShiftRegisters();
 					}
 					dummyNTFetch();
 				}
@@ -210,14 +214,14 @@ public class PPU {
 			} else if(currentDot == 257) {
 				v &= ~0x41F;
 				v |= t & 0x41F;
-				updateShiftRegisters();
+				//updateShiftRegisters();
 			} else if(currentDot >= 280 && currentDot <= 304) {
 				equalizeVerticalScroll();
 			} else if(currentDot >= 321 && currentDot < 337) {
 				evaluateBG();
 			} else if(currentDot >= 337 && currentDot <= 340) {
 				if(currentDot == 337) {
-					updateShiftRegisters();
+					//updateShiftRegisters();
 				}
 				dummyNTFetch();
 			}
@@ -770,7 +774,7 @@ public class PPU {
 		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
 		bgShiftHigh |= (BitUtils.reverseByte(ptByteHigh) << 8);
-		int tempAtByte = 0;
+		/*int tempAtByte = 0;
 		if((v >> 1 & 1) == 0) {
 			if((v >> 5 & 1) == 0) {
 				tempAtByte = atByte & 3;
@@ -785,7 +789,29 @@ public class PPU {
 			}
 		}
 		bgAtLatchLow = tempAtByte & 1;
-		bgAtLatchHigh = tempAtByte >> 1 & 1;
+		bgAtLatchHigh = tempAtByte >> 1 & 1;*/
+		final int row = ((((v & 0x3E0) >> 5)) % 4) / 2;
+		final int col = ((v & 0x1F) % 4) / 2;
+		int attrByte = 0;
+		if(row == 0) {
+			if(col == 0) {		
+				//Top left
+				attrByte = atByte & 3;
+			} else {
+				//Top Right
+				attrByte = atByte >> 2 & 3;
+			}
+		} else {
+			if(col == 0) {
+				//Bottom left
+				attrByte = atByte >> 4 & 3;
+			} else {
+				//Bottom right
+				attrByte = atByte >> 6 & 3;
+			}
+		}
+		bgAtLatchHigh= attrByte >> 1 & 1;
+		bgAtLatchLow = attrByte & 1;
 	}
 	
 	private void shiftBGRegisters() {
@@ -804,7 +830,12 @@ public class PPU {
 		bgPixel |= (bgShiftHigh >> (xScroll)) & 1 << 1;
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
 		bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
+		final int dotIndex = (currentScanline * 256) + (currentDot - 1);
 		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
+		atBytes[dotIndex] = atByte;
+		ntBytes[dotIndex] = ntByte;
+		ptLowBytes[dotIndex] = ptByteLow;
+		ptHighBytes[dotIndex] = ptByteHigh;
 		shiftBGRegisters();
 	}
 
@@ -918,6 +949,11 @@ public class PPU {
 		return paletteRam;
 	}
 	
+	
+	public void printPixelDetails(int x, int y) {
+		final int dotIndex = y * 256 + x;
+		System.out.println("AT Byte at " + x + "," + y + ": " + Integer.toHexString(atBytes[dotIndex]));
+	}
 	
 
 }
