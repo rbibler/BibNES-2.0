@@ -167,7 +167,7 @@ public class PPU {
 	}
 	
 	private void cycleRenderOn() {
-		/*if(currentScanline < 240 && currentDot >= 2) {
+		if(currentScanline < 240 && currentDot >= 2) {
 			if(currentDot <= 256) {
 				renderDot();
 			}
@@ -221,15 +221,15 @@ public class PPU {
 				}
 				dummyNTFetch();
 			}
-		}*/
-		ntMemoryAccess();
+		}
+		/*ntMemoryAccess();
 		shiftRegisterReload();
 		hCounterIncrement();
 		vCounterUpdate();
 		hCounterReload();
 		vCounterReload();
 		pixelRender();
-		shiftRegisters();
+		shiftRegisters();*/
 		if(currentScanline == 241){
 			if(currentDot == 1) {
 				PPU_STATUS |= 0x80; 											// Set Vblank flag
@@ -697,7 +697,6 @@ public class PPU {
 		switch(adjustedDot) {
 		case 0:															// Assert NT address.
 			addressBus.assertAddress(0x2000 | (v & 0xFFF));
-			System.out.println("SL: " + currentScanline + " Dot: " + currentDot + " Address: " + Integer.toHexString(v & 0xFFF).toUpperCase());
 			if(currentDot >= 9 && currentDot != 321) {
 				updateShiftRegisters();
 			}
@@ -732,6 +731,9 @@ public class PPU {
 	}
 	
 	private void ntAddressFetch() {
+		if(currentScanline == 261 && currentDot == 321) {
+			System.out.println("First nt byte");
+		}
 		addressBus.assertAddress(0x2000 | (v & 0xFFF));
 	}
 	
@@ -798,12 +800,12 @@ public class PPU {
 	}
 	
 	private void renderDot() {
-		int bgPixel = (bgShiftLow >> (7 - xScroll)) & 1;
-		bgPixel |= (bgShiftHigh >> (7 - xScroll)) & 1 << 1;
+		int bgPixel = (bgShiftLow >> (xScroll)) & 1;
+		bgPixel |= (bgShiftHigh >> (xScroll)) & 1 << 1;
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
 		bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
 		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
-		//shiftBGRegisters();
+		shiftBGRegisters();
 	}
 
 	private void incrementHorizontal() {
