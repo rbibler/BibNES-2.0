@@ -160,7 +160,6 @@ public class PPU {
 			if(currentScanline == linesPerFrame) {
 				currentDot = 0;
 				currentScanline = 0;
-				System.out.println("-----Frame-----");
 				return true;
 			}
 		}
@@ -229,8 +228,8 @@ public class PPU {
 		vCounterUpdate();
 		hCounterReload();
 		vCounterReload();
-		shiftRegisters();
 		pixelRender();
+		shiftRegisters();
 		if(currentScanline == 241){
 			if(currentDot == 1) {
 				PPU_STATUS |= 0x80; 											// Set Vblank flag
@@ -804,7 +803,7 @@ public class PPU {
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
 		bgPixel |= (bgAtShiftHigh >> (xScroll) & 1) << 3;
 		frame[(currentScanline * 256) + (currentDot - 1)] = NESPalette.getColor(paletteRam.read(bgPixel));
-		shiftBGRegisters();
+		//shiftBGRegisters();
 	}
 
 	private void incrementHorizontal() {
