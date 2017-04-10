@@ -30,7 +30,7 @@ public class TVDisplay extends JPanel {
 
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				ppu.printPixelDetails(e.getX() / 4, e.getY() / 4);
+				//ppu.printPixelDetails(e.getX() / 4, e.getY() / 4);
 			}
 
 			@Override

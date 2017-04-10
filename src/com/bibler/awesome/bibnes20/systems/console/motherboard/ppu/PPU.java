@@ -4,6 +4,7 @@ import com.bibler.awesome.bibnes20.systems.console.motherboard.busses.PPUAddress
 import com.bibler.awesome.bibnes20.systems.console.motherboard.cpu.CPU;
 import com.bibler.awesome.bibnes20.systems.utilitychips.RAM;
 import com.bibler.awesome.bibnes20.utilities.BitUtils;
+import com.bibler.awesome.bibnes20.utilities.StringUtilities;
 
 public class PPU {
 	
@@ -171,7 +172,7 @@ public class PPU {
 	}
 	
 	private void cycleRenderOn() {
-		if(currentScanline < 240 && currentDot >= 2) {
+		/*if(currentScanline < 240 && currentDot >= 2) {
 			if(currentDot <= 256) {
 				renderDot();
 			}
@@ -225,15 +226,15 @@ public class PPU {
 				}
 				dummyNTFetch();
 			}
-		}
-		/*ntMemoryAccess();
+		}*/pixelRender();
+		ntMemoryAccess();
 		shiftRegisterReload();
 		hCounterIncrement();
 		vCounterUpdate();
 		hCounterReload();
 		vCounterReload();
-		pixelRender();
-		shiftRegisters();*/
+		
+		shiftRegisters();
 		if(currentScanline == 241){
 			if(currentDot == 1) {
 				PPU_STATUS |= 0x80; 											// Set Vblank flag
@@ -258,7 +259,7 @@ public class PPU {
 
 	private void shiftRegisters() {
 		if(currentScanline <= 239) {
-			if((currentDot >= 2 && currentDot < 257) || (currentDot >= 321 && currentDot <= 336) ) {
+			if((currentDot >= 1 && currentDot < 257) || (currentDot >= 321 && currentDot <= 336) ) {
 				shiftBGRegisters();
 			}
 		} else if(currentScanline == 261) {
@@ -695,49 +696,8 @@ public class PPU {
 	private void equalizeVerticalScroll() {
 		v = t;
 	}
-
-	private void evaluateBG() {
-		final int adjustedDot = (currentDot - 1) % 8;
-		switch(adjustedDot) {
-		case 0:															// Assert NT address.
-			addressBus.assertAddress(0x2000 | (v & 0xFFF));
-			if(currentDot >= 9 && currentDot != 321) {
-				updateShiftRegisters();
-			}
-			break;
-		case 1:															// Latch NT byte
-			ntByte = addressBus.readLatchedData();
-			break;
-		case 2:															// Assert AT address
-			addressBus.assertAddress(0x23C0 | (v & 0xC00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07));
-			break;
-		case 3:															// Latch AT byte
-			atByte = addressBus.readLatchedData();
-			break;
-		case 4:															// Assert PT low address
-			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 |  (v >> 12) & 7);
-			break;
-		case 5:															// Latch PT low byte
-			ptByteLow = addressBus.readLatchedData();
-			break;
-		case 6:															// Assert PT high address
-			addressBus.assertAddress( ((PPU_CTRL >> 4) & 1) << 0xC | ntByte << 4 | 8 |  (v >> 12) & 7);
-			 break;
-		case 7:															// Latch PT high byte		
-			ptByteHigh = addressBus.readLatchedData();
-			incrementHorizontal();
-			break;
-		}
-		if (currentDot >= 321 && currentDot <= 336) {
-            shiftBGRegisters();
-        }
-		
-	}
 	
 	private void ntAddressFetch() {
-		if(currentScanline == 261 && currentDot == 321) {
-			System.out.println("First nt byte");
-		}
 		addressBus.assertAddress(0x2000 | (v & 0xFFF));
 	}
 	
@@ -774,24 +734,8 @@ public class PPU {
 		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
 		bgShiftHigh |= (BitUtils.reverseByte(ptByteHigh) << 8);
-		/*int tempAtByte = 0;
-		if((v >> 1 & 1) == 0) {
-			if((v >> 5 & 1) == 0) {
-				tempAtByte = atByte & 3;
-			} else {
-				tempAtByte = (atByte >> 4) & 3;
-			}
-		} else {
-			if((v >> 5 & 1) == 0) {
-				tempAtByte = atByte >> 2 & 3;
-			} else {
-				tempAtByte = atByte >> 6 & 3;
-			}
-		}
-		bgAtLatchLow = tempAtByte & 1;
-		bgAtLatchHigh = tempAtByte >> 1 & 1;*/
 		final int row = ((((v & 0x3E0) >> 5)) % 4) / 2;
-		final int col = ((v & 0x1F) % 4) / 2;
+		final int col = (((v & 0x1F) % 4) / 2);
 		int attrByte = 0;
 		if(row == 0) {
 			if(col == 0) {		
@@ -826,6 +770,7 @@ public class PPU {
 	}
 	
 	private void renderDot() {
+		printPixelDetails();
 		int bgPixel = (bgShiftLow >> (xScroll)) & 1;
 		bgPixel |= (bgShiftHigh >> (xScroll)) & 1 << 1;
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
@@ -836,7 +781,7 @@ public class PPU {
 		ntBytes[dotIndex] = ntByte;
 		ptLowBytes[dotIndex] = ptByteLow;
 		ptHighBytes[dotIndex] = ptByteHigh;
-		shiftBGRegisters();
+		//shiftBGRegisters();
 	}
 
 	private void incrementHorizontal() {
@@ -950,9 +895,34 @@ public class PPU {
 	}
 	
 	
-	public void printPixelDetails(int x, int y) {
-		final int dotIndex = y * 256 + x;
-		System.out.println("AT Byte at " + x + "," + y + ": " + Integer.toHexString(atBytes[dotIndex]));
+	public void printPixelDetails() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(StringUtilities.padZeroes(currentScanline, 3, 10));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(currentDot, 3, 10));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(v, 16, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(ntByte, 2, 16));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(atByte, 8, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(ptByteLow, 8, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(ptByteHigh, 8, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgAtLatchLow, 1, 10));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgAtLatchHigh, 1, 10));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgShiftLow, 16, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgShiftHigh, 16, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgAtShiftLow, 8, 2));
+		sb.append(" ");
+		sb.append(StringUtilities.padZeroes(bgAtShiftHigh, 8, 2));
+		System.out.println(sb.toString());
 	}
 	
 
