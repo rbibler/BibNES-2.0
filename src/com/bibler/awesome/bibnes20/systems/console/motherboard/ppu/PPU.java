@@ -226,14 +226,15 @@ public class PPU {
 				}
 				dummyNTFetch();
 			}
-		}*/pixelRender();
+		}*/
 		ntMemoryAccess();
-		shiftRegisterReload();
+		
 		hCounterIncrement();
 		vCounterUpdate();
 		hCounterReload();
 		vCounterReload();
-		
+		shiftRegisterReload();
+		pixelRender();
 		shiftRegisters();
 		if(currentScanline == 241){
 			if(currentDot == 1) {
@@ -734,8 +735,9 @@ public class PPU {
 		bgShiftLow |= (BitUtils.reverseByte(ptByteLow) << 8);
 		bgShiftHigh &= ~0xFF00;
 		bgShiftHigh |= (BitUtils.reverseByte(ptByteHigh) << 8);
-		final int row = ((((v & 0x3E0) >> 5)) % 4) / 2;
-		final int col = (((v & 0x1F) % 4) / 2);
+		int tempv = v;// - 1;
+		final int row = ((((tempv & 0x3E0) >> 5)) % 4) / 2;
+		final int col = (((tempv & 0x1F) % 4) / 2);
 		int attrByte = 0;
 		if(row == 0) {
 			if(col == 0) {		
@@ -770,7 +772,7 @@ public class PPU {
 	}
 	
 	private void renderDot() {
-		printPixelDetails();
+		//printPixelDetails();
 		int bgPixel = (bgShiftLow >> (xScroll)) & 1;
 		bgPixel |= (bgShiftHigh >> (xScroll)) & 1 << 1;
 		bgPixel |= (bgAtShiftLow >> (xScroll) & 1) << 2;
