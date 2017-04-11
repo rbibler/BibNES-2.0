@@ -19,6 +19,7 @@ public class TVDisplay extends JPanel {
 	 */
 	private static final long serialVersionUID = -7320807209819565759L;
 	private int[] frame;
+	private int[] clearFrame = new int[256 * 240];
 	private BufferedImage displayImage;
 	private PPU ppu;
 	
@@ -82,6 +83,10 @@ public class TVDisplay extends JPanel {
 
 	public void setPPU(PPU ppu) {
 		this.ppu = ppu;
+	}
+
+	public void clearFrame() {
+		updateFrame(clearFrame);
 	}
 
 }

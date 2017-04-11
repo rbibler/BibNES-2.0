@@ -36,4 +36,8 @@ public class Console {
 		tvOut.displayFrame(motherboard.getFrame());
 	}
 
+	public void clearFrame() {
+		tvOut.clearFrame();
+	}
+
 }

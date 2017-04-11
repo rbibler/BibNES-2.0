@@ -46,6 +46,11 @@ public class TVOut extends JFrame {
 	public void setPPU(PPU ppu) {
 		display.setPPU(ppu);
 	}
+
+	public void clearFrame() {
+		display.clearFrame();
+		
+	}
 	
 
 }

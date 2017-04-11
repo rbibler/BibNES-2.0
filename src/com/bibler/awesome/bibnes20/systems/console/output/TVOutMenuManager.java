@@ -2,12 +2,14 @@ package com.bibler.awesome.bibnes20.systems.console.output;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.io.File;
 
 import javax.swing.JFileChooser;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.KeyStroke;
 
 import com.bibler.awesome.bibnes20.systems.console.ThreadRunner;
 import com.bibler.awesome.bibnes20.systems.gamepak.GamePak;
@@ -68,6 +70,18 @@ public class TVOutMenuManager extends JMenuBar {
 			}
 			
 		});
+		
+		JMenuItem nextPixel = new JMenuItem("Next Pixel");
+		console.add(nextPixel);
+		nextPixel.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				runner.takeNotice("NEXT_PIXEL", null);
+			}
+			
+		});
+		nextPixel.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
 	}
 	
 	protected void loadBin() {

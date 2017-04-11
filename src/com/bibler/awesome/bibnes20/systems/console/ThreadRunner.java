@@ -49,32 +49,32 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		while(!Thread.interrupted()) {
 			if(!pause) {
 				//for(long i = 0; i < 357366; i++) {
-					if(cpuDivider == 12) {
-						cpuDivider = 0;
-						clockCPU();
-					}
-					cpuDivider++;
-					if(ppuDivider == 4) {
-						ppuDivider = 0;
-						frame = clockPPU();
-					}
-					ppuDivider++;
+				if(cpuDivider == 12) {
+					cpuDivider = 0;
+					clockCPU();
+				}
+				cpuDivider++;
+				if(ppuDivider == 4) {
+					ppuDivider = 0;
+					frame = clockPPU();
+				}
+				ppuDivider++;
 				//}
-					if(frame) {
-						frame = false;
-						console.displayFrame();
-						debugFrame.updateFrame();
-					
-						final long timeTaken = System.currentTimeMillis() - lastFrameTime;
-						final long sleepTime = FPS - timeTaken;
+				if(frame) {
+					frame = false;
+					console.displayFrame();
+					debugFrame.updateFrame();
+				
+					final long timeTaken = System.currentTimeMillis() - lastFrameTime;
+					final long sleepTime = FPS - timeTaken;
 				//System.out.println("Sleep time: " + sleepTime);
-						if(sleepTime > 0) {
-							try {
-								Thread.sleep(sleepTime);
-							} catch(InterruptedException e) {}
-						}
-						lastFrameTime = System.currentTimeMillis();
+					if(sleepTime > 0) {
+						try {
+							Thread.sleep(sleepTime);
+						} catch(InterruptedException e) {}
 					}
+					lastFrameTime = System.currentTimeMillis();
+				}
 			} 
 		}
 	}
@@ -95,6 +95,39 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		} while(cycleResult != 0);
 		notify("CPU_UPDATE", motherboard.getCPU().getStatusUpdate());
 	}
+	private int frameCount;
+	private void nextPixel() {
+		if(debug) {
+			while(frameCount < 8) {
+				frame = false;
+			while(frame == false) {
+				if(cpuDivider == 12) {
+					cpuDivider = 0;
+					clockCPU();
+				}
+				cpuDivider++;
+				if(ppuDivider == 4) {
+					ppuDivider = 0;
+					frame = clockPPU();
+					System.out.println(frame);
+				}
+				ppuDivider++;
+				
+			}
+			frameCount++;
+			}
+			debug = false;
+		}
+		console.clearFrame();
+		System.out.println("Y");
+		clockPPU();
+		cpuDivider += 4;
+		if(cpuDivider == 12) {
+			clockCPU();
+			cpuDivider = 0;
+		}
+		console.displayFrame();
+	}
 	
 	public synchronized void pause() {
 		pause = true;
@@ -108,7 +141,7 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		this.debugFrame = debugFrame;
 	}
 	
-	private boolean debug = false;
+	private boolean debug = true;
 
 	@Override
 	public void takeNotice(String message, Object messagePacket) {
@@ -134,6 +167,8 @@ public class ThreadRunner extends Notifier implements Runnable, Notifiable {
 		} else if(message.equalsIgnoreCase("RUN")) {
 			startEmulator();
 			resume();
+		} else if(message.equalsIgnoreCase("NEXT_PIXEL")) {
+			nextPixel();
 		}
 	}
 }
